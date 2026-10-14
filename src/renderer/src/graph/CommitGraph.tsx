@@ -263,7 +263,7 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
           <div className="min-w-0 flex-1 truncate px-2">{t('graph.subject')}</div>
           <Resizer
             orientation="vertical"
-            onDelta={authorCol.onDelta}
+            onDelta={(d) => authorCol.onDelta(-d)}
             onCommit={authorCol.onCommit}
             className="self-stretch"
           />
@@ -272,7 +272,7 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
           </div>
           <Resizer
             orientation="vertical"
-            onDelta={dateCol.onDelta}
+            onDelta={(d) => dateCol.onDelta(-d)}
             onCommit={dateCol.onCommit}
             className="self-stretch"
           />
@@ -281,7 +281,7 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
           </div>
           <Resizer
             orientation="vertical"
-            onDelta={oidCol.onDelta}
+            onDelta={(d) => oidCol.onDelta(-d)}
             onCommit={oidCol.onCommit}
             className="self-stretch"
           />
