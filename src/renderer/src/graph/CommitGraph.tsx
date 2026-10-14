@@ -10,16 +10,16 @@ const LANE_W = 16
 const PAD_X = 8
 const RADIUS = 4.5
 const LANE_COLORS = [
-  '#34d399',
-  '#38bdf8',
-  '#fbbf24',
-  '#fb7185',
-  '#a78bfa',
-  '#2dd4bf',
-  '#a3e635',
-  '#f97316',
-  '#22d3ee',
-  '#e879f9'
+  '#15803d',
+  '#0369a1',
+  '#b45309',
+  '#be123c',
+  '#6d28d9',
+  '#0f766e',
+  '#4d7c0f',
+  '#c2410c',
+  '#0e7490',
+  '#a21caf'
 ]
 
 export function CommitGraph(): React.JSX.Element {
@@ -46,10 +46,10 @@ export function CommitGraph(): React.JSX.Element {
       map.set(oid, arr)
     }
     for (const b of refs?.branches ?? []) {
-      if (b.isRemote) push(b.oid, b.name, '#38bdf8')
-      else push(b.oid, b.name, '#34d399')
+      if (b.isRemote) push(b.oid, b.name, '#0369a1')
+      else push(b.oid, b.name, '#15803d')
     }
-    for (const tag of refs?.tags ?? []) push(tag.oid, tag.name, '#fbbf24')
+    for (const tag of refs?.tags ?? []) push(tag.oid, tag.name, '#b45309')
     return map
   }, [refs])
 
@@ -157,7 +157,7 @@ export function CommitGraph(): React.JSX.Element {
       const isSelected = selection.kind === 'commit' && selection.oid === row.oid
       ctx.beginPath()
       ctx.arc(cx(row.lane), y, isSelected ? RADIUS + 1.5 : RADIUS, 0, Math.PI * 2)
-      ctx.fillStyle = '#09090b'
+      ctx.fillStyle = '#f6efdb'
       ctx.fill()
       ctx.lineWidth = 2.5
       ctx.strokeStyle = color(row.lane)
@@ -223,7 +223,7 @@ export function CommitGraph(): React.JSX.Element {
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <span
                     className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${
-                      wipCount ? 'bg-emerald-500 text-black' : 'bg-zinc-700 text-zinc-400'
+                      wipCount ? 'bg-emerald-500 text-white' : 'bg-zinc-700 text-zinc-400'
                     }`}
                   >
                     {wipCount ? '!' : '·'}

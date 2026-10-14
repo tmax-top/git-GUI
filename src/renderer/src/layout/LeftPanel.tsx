@@ -18,7 +18,7 @@ function Section(props: {
       >
         <span>{open ? '▾' : '▸'}</span>
         <span className="flex-1 text-left">{props.title}</span>
-        <span className="text-zinc-700">{props.count}</span>
+        <span className="text-zinc-500">{props.count}</span>
       </button>
       {open && <div className="pb-1">{props.children}</div>}
     </div>
@@ -46,7 +46,7 @@ function Row(props: {
       {props.badge && (
         <span
           className="shrink-0 rounded px-1 text-[10px]"
-          style={{ backgroundColor: `${props.badgeColor ?? '#38bdf8'}22`, color: props.badgeColor ?? '#38bdf8' }}
+          style={{ backgroundColor: `${props.badgeColor ?? '#0369a1'}22`, color: props.badgeColor ?? '#0369a1' }}
         >
           {props.badge}
         </span>
@@ -84,7 +84,7 @@ export function LeftPanel(): React.JSX.Element {
             label={b.name}
             active={refs?.current === b.name}
             badge={refs?.current === b.name ? t('left.current') : undefined}
-            badgeColor="#34d399"
+            badgeColor="#15803d"
             onClick={() => doCheckout(b.name)}
           />
         ))}
@@ -108,19 +108,19 @@ export function LeftPanel(): React.JSX.Element {
 
       <Section title={t('left.tags')} count={tags.length} defaultOpen={false}>
         {tags.map((tag) => (
-          <Row key={tag.fullName} label={tag.name} badgeColor="#fbbf24" />
+          <Row key={tag.fullName} label={tag.name} badgeColor="#b45309" />
         ))}
       </Section>
 
       <Section title={t('left.stash')} count={stashes.length}>
         {stashes.map((s) => (
-          <Row key={s.oid} label={`${s.ref} ${s.subject}`} badgeColor="#a78bfa" />
+          <Row key={s.oid} label={`${s.ref} ${s.subject}`} badgeColor="#6d28d9" />
         ))}
       </Section>
 
       <Section title={t('left.submodules')} count={submodules.length}>
         {submodules.map((s) => (
-          <Row key={s.path} label={s.path} badge={s.status.trim() || '='} badgeColor="#2dd4bf" />
+          <Row key={s.path} label={s.path} badge={s.status.trim() || '='} badgeColor="#0f766e" />
         ))}
       </Section>
 

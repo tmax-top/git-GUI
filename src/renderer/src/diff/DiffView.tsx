@@ -121,8 +121,8 @@ function HunkView(props: {
           <button
             className={`rounded px-2 py-0.5 font-sans ${
               action === 'stage'
-                ? 'bg-emerald-800/60 text-emerald-200 hover:bg-emerald-700'
-                : 'bg-amber-800/60 text-amber-200 hover:bg-amber-700'
+                ? 'bg-emerald-800/60 text-emerald-200 hover:bg-emerald-700 hover:text-white'
+                : 'bg-amber-800/60 text-amber-200 hover:bg-amber-700 hover:text-amber-900'
             }`}
             onClick={() => props.onHunk?.(props.file, props.index)}
           >

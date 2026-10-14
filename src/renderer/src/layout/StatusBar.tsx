@@ -43,7 +43,7 @@ export function StatusBar(): React.JSX.Element {
           ↑{status.ahead} ↓{status.behind}
         </span>
       )}
-      <span className="text-zinc-700">{t('app.title')}</span>
+      <span className="text-zinc-500">{t('app.title')}</span>
     </footer>
   )
 }

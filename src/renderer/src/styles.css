@@ -1,1 +1,103 @@
 @import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+ * Warm yellow-white "eye-care" theme.
+ * Tailwind v4 utilities read these CSS vars, so overriding them re-skins
+ * every bg/text/border/… utility at once. Unlayered :root wins over the
+ * layered theme block emitted by the import.
+ * ------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  --color-white: #fffef9;
+  --color-black: #26210f;
+
+  /* warm cream surfaces */
+  --color-zinc-950: #f6efdb;
+  --color-zinc-900: #faf6e8;
+  --color-zinc-800: #efe8cd;
+  --color-zinc-700: #d8cfa8;
+  /* warm dark text ladder */
+  --color-zinc-600: #8a8164;
+  --color-zinc-500: #7d7458;
+  --color-zinc-400: #6b6349;
+  --color-zinc-300: #57513c;
+  --color-zinc-200: #4b4634;
+  --color-zinc-100: #3a3526;
+
+  /* green — success / primary actions */
+  --color-emerald-100: #2c4f10;
+  --color-emerald-200: #2c4f10;
+  --color-emerald-300: #33590f;
+  --color-emerald-400: #3a6612;
+  --color-emerald-500: #3f7a14;
+  --color-emerald-600: #356411;
+  --color-emerald-700: #2d540e;
+  --color-emerald-800: #dcf0c8;
+  --color-emerald-900: #eaf6da;
+  --color-emerald-950: #e6f4d7;
+
+  /* red — danger */
+  --color-rose-100: #7f1d1d;
+  --color-rose-200: #7f1d1d;
+  --color-rose-300: #991b1b;
+  --color-rose-400: #b91c1c;
+  --color-rose-500: #c0392b;
+  --color-rose-600: #a93226;
+  --color-rose-700: #8f2820;
+  --color-rose-800: #f7dede;
+  --color-rose-900: #fbe8e8;
+  --color-rose-950: #fce8e8;
+
+  /* amber — unstaged / warnings / tags */
+  --color-amber-200: #92400e;
+  --color-amber-300: #92400e;
+  --color-amber-400: #a16207;
+  --color-amber-500: #b45309;
+  --color-amber-600: #92400e;
+  --color-amber-700: #f0dfae;
+  --color-amber-800: #f5e8c4;
+  --color-amber-900: #fbf1d8;
+  --color-amber-950: #fdf6e3;
+
+  /* sky — untracked / remote branches */
+  --color-sky-400: #0369a1;
+  --color-sky-500: #075985;
+}
+
+html,
+body {
+  background: #f6efdb;
+}
+
+::selection {
+  background: #f5e6a8;
+  color: #3a3526;
+}
+
+/* warm light scrollbars */
+* {
+  scrollbar-color: #cfc5a3 transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cfc5a3;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b8ae8c;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
