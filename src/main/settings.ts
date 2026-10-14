@@ -13,6 +13,12 @@ export interface AppSettings {
   graphInitialLimit: number
   defaultBranch: string
   language: 'system' | 'zh' | 'en'
+  leftPanelWidth: number
+  rightPanelWidth: number
+  graphSplitPct: number
+  graphAuthorWidth: number
+  graphDateWidth: number
+  graphOidWidth: number
 }
 
 export interface SessionState {
@@ -25,7 +31,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   recent: [],
   graphInitialLimit: 500,
   defaultBranch: 'main',
-  language: 'system'
+  language: 'system',
+  leftPanelWidth: 224,
+  rightPanelWidth: 320,
+  graphSplitPct: 55,
+  graphAuthorWidth: 112,
+  graphDateWidth: 48,
+  graphOidWidth: 40
 }
 
 const DEFAULT_SESSION: SessionState = {

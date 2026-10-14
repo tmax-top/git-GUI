@@ -1,8 +1,9 @@
+import { memo } from 'react'
 import { useApp } from '../store'
 import { t, tf } from '../i18n'
 import { isStaged, isUntracked } from '@shared/status'
 
-export function StatusBar(): React.JSX.Element {
+export const StatusBar = memo(function StatusBar(): React.JSX.Element {
   const repoPath = useApp((s) => s.repoPath)
   const status = useApp((s) => s.status)
   const error = useApp((s) => s.error)
@@ -46,4 +47,4 @@ export function StatusBar(): React.JSX.Element {
       <span className="text-zinc-500">{t('app.title')}</span>
     </footer>
   )
-}
+})

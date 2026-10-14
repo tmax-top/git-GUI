@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { isImagePath } from './imagePath'
 import { DiffView, ImageView, EmptyDiff } from '../diff/DiffView'
 import { currentCommit, useApp } from '../store'
@@ -9,7 +10,7 @@ function isImageFile(f: DiffFile): boolean {
   return isImagePath(f.path)
 }
 
-export function DiffPanel(): React.JSX.Element {
+export const DiffPanel = memo(function DiffPanel(): React.JSX.Element {
   const repoPath = useApp((s) => s.repoPath)
   const selection = useApp((s) => s.selection)
   const diffFiles = useApp((s) => s.diffFiles)
@@ -69,4 +70,4 @@ export function DiffPanel(): React.JSX.Element {
   }
 
   return <EmptyDiff />
-}
+})

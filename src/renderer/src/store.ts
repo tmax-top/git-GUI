@@ -179,7 +179,13 @@ export const useApp = create<AppState>((set, get) => {
       recent: [],
       graphInitialLimit: 500,
       defaultBranch: 'main',
-      language: 'system'
+      language: 'system',
+      leftPanelWidth: 224,
+      rightPanelWidth: 320,
+      graphSplitPct: 55,
+      graphAuthorWidth: 112,
+      graphDateWidth: 48,
+      graphOidWidth: 40
     },
 
     async boot(): Promise<void> {

@@ -1,8 +1,9 @@
+import { memo } from 'react'
 import { useApp } from '../store'
 import { t, tf } from '../i18n'
 import { btnGhost } from '../components/Modal'
 
-export function Toolbar(): React.JSX.Element {
+export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const status = useApp((s) => s.status)
   const sync = useApp((s) => s.sync)
   const fetchNow = useApp((s) => s.fetch)
@@ -109,4 +110,4 @@ export function Toolbar(): React.JSX.Element {
       )}
     </header>
   )
-}
+})

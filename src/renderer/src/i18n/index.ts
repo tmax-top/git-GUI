@@ -64,6 +64,10 @@ export const zh = {
   'graph.empty': '还没有提交记录',
   'graph.loading': '加载提交…',
   'graph.commits': '{n} 个提交',
+  'graph.subject': '提交信息',
+  'graph.author': '作者',
+  'graph.date': '日期',
+  'graph.oid': 'OID',
 
   'panel.staged': '已暂存',
   'panel.changes': '未暂存更改',
@@ -187,6 +191,10 @@ export const en = {
   'graph.empty': 'No commits yet',
   'graph.loading': 'Loading commits…',
   'graph.commits': '{n} commits',
+  'graph.subject': 'Subject',
+  'graph.author': 'Author',
+  'graph.date': 'Date',
+  'graph.oid': 'OID',
 
   'panel.staged': 'Staged',
   'panel.changes': 'Unstaged changes',

@@ -96,6 +96,18 @@ export interface AppSettingsDto {
   graphInitialLimit: number
   defaultBranch: string
   language: 'system' | 'zh' | 'en'
+  /** Left sidebar width in px. */
+  leftPanelWidth: number
+  /** Right commit panel width in px. */
+  rightPanelWidth: number
+  /** Graph area share of the middle column, 15–85 (%). */
+  graphSplitPct: number
+  /** Author column width in the commit graph, px. */
+  graphAuthorWidth: number
+  /** Date column width in the commit graph, px. */
+  graphDateWidth: number
+  /** OID column width in the commit graph, px. */
+  graphOidWidth: number
 }
 
 export interface SessionStateDto {
@@ -373,7 +385,13 @@ export const settingsPatchSchema = z.object({
   recent: z.array(repoPathSchema).max(200).optional(),
   graphInitialLimit: z.number().int().min(50).max(20_000).optional(),
   defaultBranch: z.string().min(1).max(255).optional(),
-  language: z.enum(['system', 'zh', 'en']).optional()
+  language: z.enum(['system', 'zh', 'en']).optional(),
+  leftPanelWidth: z.number().int().min(160).max(600).optional(),
+  rightPanelWidth: z.number().int().min(220).max(700).optional(),
+  graphSplitPct: z.number().min(15).max(85).optional(),
+  graphAuthorWidth: z.number().int().min(60).max(400).optional(),
+  graphDateWidth: z.number().int().min(40).max(200).optional(),
+  graphOidWidth: z.number().int().min(40).max(160).optional()
 })
 
 export const sessionPatchSchema = z.object({

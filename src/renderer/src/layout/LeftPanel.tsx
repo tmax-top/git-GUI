@@ -55,7 +55,7 @@ function Row(props: {
   )
 }
 
-export function LeftPanel(): React.JSX.Element {
+export function LeftPanel(props: { width: number }): React.JSX.Element {
   const refs = useApp((s) => s.refs)
   const checkout = useApp((s) => s.checkout)
   const repoPath = useApp((s) => s.repoPath)
@@ -76,7 +76,10 @@ export function LeftPanel(): React.JSX.Element {
   }
 
   return (
-    <aside className="theme-cream w-56 shrink-0 overflow-y-auto border-r border-zinc-800 bg-zinc-950 pb-4">
+    <aside
+      className="theme-cream shrink-0 overflow-y-auto border-r border-zinc-800 bg-zinc-950 pb-4"
+      style={{ width: props.width }}
+    >
       <Section title={t('left.branchesLocal')} count={local.length} defaultOpen>
         {local.map((b) => (
           <Row

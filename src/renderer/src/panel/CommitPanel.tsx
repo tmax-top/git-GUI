@@ -143,7 +143,7 @@ function Section(props: {
   )
 }
 
-export function CommitPanel(): React.JSX.Element {
+export function CommitPanel(props: { width: number }): React.JSX.Element {
   const status = useApp((s) => s.status)
   const selection = useApp((s) => s.selection)
   const refs = useApp((s) => s.refs)
@@ -164,7 +164,10 @@ export function CommitPanel(): React.JSX.Element {
   if (selection.kind === 'commit') {
     const commit = currentCommit(commits, selection.oid)
     return (
-      <aside className="flex w-80 shrink-0 flex-col overflow-auto border-l border-zinc-800 bg-zinc-950 text-sm">
+      <aside
+        className="flex shrink-0 flex-col overflow-auto border-l border-zinc-800 bg-zinc-950 text-sm"
+        style={{ width: props.width }}
+      >
         <div className="border-b border-zinc-800 px-3 py-2">
           <button className="mb-2 text-xs text-zinc-400 hover:text-emerald-400" onClick={selectWip}>
             {t('commit.backToWip')}
@@ -228,7 +231,10 @@ export function CommitPanel(): React.JSX.Element {
   }
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-zinc-800 bg-zinc-950">
+    <aside
+      className="flex shrink-0 flex-col border-l border-zinc-800 bg-zinc-950"
+      style={{ width: props.width }}
+    >
       <div className="min-h-0 flex-1 overflow-auto">
         <Section title={t('panel.staged')} count={stagedCount} color="text-emerald-400">
           {groups.staged.map((f) => (

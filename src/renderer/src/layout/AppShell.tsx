@@ -7,7 +7,8 @@ import { CommitGraph } from '../graph/CommitGraph'
 import { CommitPanel } from '../panel/CommitPanel'
 import { DiffPanel } from '../panel/DiffPanel'
 import { Modal, btnDanger, btnGhost, btnPrimary } from '../components/Modal'
-import { useState } from 'react'
+import { Resizer, useResizableSetting } from '../components/Resizer'
+import { useRef, useState } from 'react'
 
 function ConfirmModal(): React.JSX.Element | null {
   const confirm = useApp((s) => s.confirm)
@@ -90,20 +91,41 @@ function PushConflictModal(): React.JSX.Element | null {
 }
 
 export function AppShell(): React.JSX.Element {
+  const left = useResizableSetting('leftPanelWidth', 224, 160, 600)
+  const right = useResizableSetting('rightPanelWidth', 320, 220, 700)
+  const split = useResizableSetting('graphSplitPct', 55, 15, 85)
+  const mainRef = useRef<HTMLElement>(null)
+
+  // Convert a vertical drag delta (px) into a split-% delta for the graph area.
+  const onSplitDelta = (deltaPx: number): void => {
+    const h = mainRef.current?.clientHeight ?? 0
+    if (h > 0) split.onDelta((deltaPx / h) * 100)
+  }
+
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
       <Toolbar />
       <div className="flex min-h-0 flex-1">
-        <LeftPanel />
-        <main className="flex min-w-0 flex-1 flex-col">
-          <div className="flex min-h-0 basis-[55%] flex-col">
+        <LeftPanel width={left.value} />
+        <Resizer orientation="vertical" onDelta={left.onDelta} onCommit={left.onCommit} />
+        <main ref={mainRef} className="flex min-w-0 flex-1 flex-col">
+          <div
+            className="flex min-h-0 flex-col"
+            style={{ flexBasis: `${split.value}%`, flexGrow: 0, flexShrink: 0 }}
+          >
             <CommitGraph />
           </div>
-          <div className="flex min-h-0 flex-1 flex-col border-t border-zinc-800 bg-zinc-950">
+          <Resizer orientation="horizontal" onDelta={onSplitDelta} onCommit={split.onCommit} />
+          <div className="flex min-h-0 flex-1 flex-col bg-zinc-950">
             <DiffPanel />
           </div>
         </main>
-        <CommitPanel />
+        <Resizer
+          orientation="vertical"
+          onDelta={(d) => right.onDelta(-d)}
+          onCommit={right.onCommit}
+        />
+        <CommitPanel width={right.value} />
       </div>
       <StatusBar />
       <ConfirmModal />

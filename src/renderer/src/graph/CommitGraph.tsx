@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { layoutGraph } from './layout'
 import { useApp } from '../store'
 import { t } from '../i18n'
 import { relativeTime } from '../utils/format'
+import { Resizer, useResizableSetting } from '../components/Resizer'
 
 const ROW_H = 28
 const LANE_W = 16
@@ -22,7 +23,9 @@ const LANE_COLORS = [
   '#a21caf'
 ]
 
-export function CommitGraph(): React.JSX.Element {
+// Memoized: AppShell re-renders on every resizer move; this panel is the most
+// expensive subtree (virtualizer + canvas) and takes no props.
+export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
   const commits = useApp((s) => s.commits)
   const hasMore = useApp((s) => s.hasMore)
   const graphLoading = useApp((s) => s.graphLoading)
@@ -32,6 +35,10 @@ export function CommitGraph(): React.JSX.Element {
   const selectWip = useApp((s) => s.selectWip)
   const selectCommit = useApp((s) => s.selectCommit)
   const loadMore = useApp((s) => s.loadMore)
+
+  const authorCol = useResizableSetting('graphAuthorWidth', 112, 60, 400)
+  const dateCol = useResizableSetting('graphDateWidth', 48, 40, 200)
+  const oidCol = useResizableSetting('graphOidWidth', 40, 40, 160)
 
   const layout = useMemo(
     () => layoutGraph(commits.map((c) => ({ oid: c.oid, parents: c.parents }))),
@@ -190,9 +197,75 @@ export function CommitGraph(): React.JSX.Element {
   const wipCount = (status?.files.length ?? 0) > 0
   const stagedCount = status?.files.filter((f) => f.indexStatus !== ' ' && f.indexStatus !== '?').length ?? 0
 
+  // Horizontal scroll sync: the column header lives outside the scroll area
+  // (sticky), so it mirrors the body's scrollLeft.
+  const headerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = parentRef.current
+    if (!el) return
+    const onScroll = (): void => {
+      if (headerRef.current) headerRef.current.scrollLeft = el.scrollLeft
+    }
+    el.addEventListener('scroll', onScroll)
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Explicit content width = max(viewport, intrinsic minimum) so header and
+  // rows share identical column geometry and wide lane sets scroll cleanly.
+  const [viewportW, setViewportW] = useState(0)
+  useEffect(() => {
+    const el = parentRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setViewportW(el.clientWidth))
+    ro.observe(el)
+    setViewportW(el.clientWidth)
+    return () => ro.disconnect()
+  }, [])
+  const fixedColsW =
+    authorCol.value + dateCol.value + oidCol.value + 3 * 4 /* resizers */ + 12 /* pr-3 */
+  const contentW = Math.max(viewportW, laneColW + 80 + fixedColsW)
+
   return (
-    <div ref={parentRef} className="relative flex-1 overflow-auto overscroll-contain">
-      <div className="relative" style={{ height: virtualizer.getTotalSize(), minWidth: '100%' }}>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div ref={headerRef} className="shrink-0 overflow-hidden border-b border-black/5">
+        <div
+          className="flex select-none items-center bg-zinc-950 pr-3 text-[11px] font-medium text-zinc-500"
+          style={{ width: contentW, minWidth: '100%' }}
+        >
+          <div style={{ width: laneColW, flexShrink: 0 }} aria-hidden />
+          <div className="min-w-0 flex-1 truncate px-2">{t('graph.subject')}</div>
+          <Resizer
+            orientation="vertical"
+            onDelta={authorCol.onDelta}
+            onCommit={authorCol.onCommit}
+            className="self-stretch"
+          />
+          <div className="shrink-0 truncate px-2" style={{ width: authorCol.value }}>
+            {t('graph.author')}
+          </div>
+          <Resizer
+            orientation="vertical"
+            onDelta={dateCol.onDelta}
+            onCommit={dateCol.onCommit}
+            className="self-stretch"
+          />
+          <div className="shrink-0 truncate px-2 text-right" style={{ width: dateCol.value }}>
+            {t('graph.date')}
+          </div>
+          <Resizer
+            orientation="vertical"
+            onDelta={oidCol.onDelta}
+            onCommit={oidCol.onCommit}
+            className="self-stretch"
+          />
+          <div className="shrink-0 truncate px-2 font-mono" style={{ width: oidCol.value }}>
+            {t('graph.oid')}
+          </div>
+        </div>
+      </div>
+
+      <div ref={parentRef} className="relative flex-1 overflow-auto overscroll-contain">
+      <div className="relative" style={{ height: virtualizer.getTotalSize(), width: contentW, minWidth: '100%' }}>
         {items.length > 0 && (
           <canvas
             ref={canvasRef}
@@ -266,13 +339,24 @@ export function CommitGraph(): React.JSX.Element {
                       </span>
                     ))}
                   </div>
-                  <span className="ml-3 hidden w-28 shrink-0 truncate text-zinc-500 md:inline">
+                  <span
+                    className="ml-3 hidden shrink-0 truncate text-zinc-500 md:inline"
+                    style={{ width: authorCol.value }}
+                  >
                     {commit.authorName}
                   </span>
-                  <span className="ml-3 w-12 shrink-0 text-right tabular-nums text-zinc-600">
+                  <span
+                    className="ml-3 shrink-0 text-right tabular-nums text-zinc-600"
+                    style={{ width: dateCol.value }}
+                  >
                     {relativeTime(commit.committerTime)}
                   </span>
-                  <span className="ml-3 w-10 shrink-0 font-mono text-zinc-500">{commit.shortOid}</span>
+                  <span
+                    className="ml-3 shrink-0 font-mono text-zinc-500"
+                    style={{ width: oidCol.value }}
+                  >
+                    {commit.shortOid}
+                  </span>
                 </>
               ) : null}
             </div>
@@ -291,6 +375,7 @@ export function CommitGraph(): React.JSX.Element {
           {t('graph.loading')}
         </div>
       )}
+      </div>
     </div>
   )
-}
+})
