@@ -153,21 +153,18 @@ export function CommitGraph(): React.JSX.Element {
         ctx.stroke()
       }
 
-      // Commit dot.
+      // Commit dot — solid filled circle (branch-head style).
       const isSelected = selection.kind === 'commit' && selection.oid === row.oid
       ctx.beginPath()
-      ctx.arc(cx(row.lane), y, isSelected ? RADIUS + 1.5 : RADIUS, 0, Math.PI * 2)
-      ctx.fillStyle = '#ffffff'
+      ctx.arc(cx(row.lane), y, isSelected ? RADIUS + 1 : RADIUS, 0, Math.PI * 2)
+      ctx.fillStyle = color(row.lane)
       ctx.fill()
-      ctx.lineWidth = 2.5
-      ctx.strokeStyle = color(row.lane)
-      ctx.stroke()
       if (isSelected) {
         ctx.beginPath()
         ctx.arc(cx(row.lane), y, RADIUS + 3.5, 0, Math.PI * 2)
-        ctx.lineWidth = 1
+        ctx.lineWidth = 1.5
         ctx.strokeStyle = color(row.lane)
-        ctx.globalAlpha = 0.5
+        ctx.globalAlpha = 0.45
         ctx.stroke()
         ctx.globalAlpha = 1
       }
@@ -207,8 +204,8 @@ export function CommitGraph(): React.JSX.Element {
               key={v.key}
               data-index={i}
               ref={virtualizer.measureElement}
-              className={`absolute left-0 flex w-full cursor-pointer items-center border-b border-zinc-900/60 pr-3 text-xs hover:bg-zinc-800/60 ${
-                selected ? 'bg-zinc-800' : ''
+              className={`absolute left-0 flex w-full cursor-pointer items-center border-b border-black/5 pr-3 text-xs hover:bg-zinc-800/50 ${
+                selected ? 'bg-sky-500/10' : ''
               }`}
               style={{ top: v.start, height: ROW_H }}
               onClick={() => (isWip ? selectWip() : commit && selectCommit(commit.oid))}
