@@ -1,0 +1,128 @@
+import { spawn } from 'node:child_process'
+
+export interface GitExecOptions {
+  cwd: string
+  args: string[]
+  signal?: AbortSignal
+  timeoutMs?: number
+  stdin?: string
+  onStderr?: (chunk: string) => void
+  env?: Record<string, string>
+  /** Collect stdout as raw bytes (binary-safe). `stdout` stays empty. */
+  binary?: boolean
+}
+
+export interface GitExecResult {
+  stdout: string
+  /** Populated only when `binary: true`. */
+  stdoutBuf?: Buffer
+  stderr: string
+  code: number
+}
+
+export class GitExecError extends Error {
+  constructor(
+    public readonly result: GitExecResult,
+    public readonly args: string[]
+  ) {
+    super(`git ${args.join(' ')} exited with code ${result.code}: ${result.stderr.trim() || result.stdout.trim()}`)
+    this.name = 'GitExecError'
+  }
+}
+
+export function gitBin(): string {
+  return process.env.GIT_GUI_GIT_PATH || 'git'
+}
+
+export function execGit(opts: GitExecOptions): Promise<GitExecResult> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(gitBin(), opts.args, {
+      cwd: opts.cwd,
+      env: {
+        ...process.env,
+        ...opts.env,
+        LC_ALL: 'C',
+        LANG: 'C',
+        LANGUAGE: 'C',
+        GIT_TERMINAL_PROMPT: '0',
+        GIT_OPTIONAL_LOCKS: '0',
+        GIT_PAGER: 'cat',
+        PAGER: 'cat'
+      },
+      stdio: ['pipe', 'pipe', 'pipe']
+    })
+
+    let stdout = ''
+    let stderr = ''
+    const stdoutChunks: Buffer[] = []
+    let settled = false
+
+    const kill = (): void => {
+      if (!child.killed) child.kill('SIGTERM')
+    }
+
+    const timer =
+      opts.timeoutMs != null
+        ? setTimeout(() => {
+            kill()
+          }, opts.timeoutMs)
+        : undefined
+
+    const onAbort = (): void => kill()
+    opts.signal?.addEventListener('abort', onAbort, { once: true })
+
+    const cleanup = (): void => {
+      if (timer) clearTimeout(timer)
+      opts.signal?.removeEventListener('abort', onAbort)
+    }
+
+    if (opts.binary) {
+      child.stdout.on('data', (d: Buffer) => {
+        stdoutChunks.push(d)
+      })
+    } else {
+      child.stdout.setEncoding('utf8')
+      child.stdout.on('data', (d: string) => {
+        stdout += d
+      })
+    }
+    child.stderr.setEncoding('utf8')
+    child.stderr.on('data', (d: string) => {
+      stderr += d
+      opts.onStderr?.(d)
+    })
+
+    child.on('error', (err) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(err)
+    })
+
+    child.on('close', (code) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      resolve({
+        stdout,
+        stdoutBuf: opts.binary ? Buffer.concat(stdoutChunks) : undefined,
+        stderr,
+        code: code ?? -1
+      })
+    })
+
+    if (opts.stdin != null) {
+      child.stdin.end(opts.stdin)
+    } else {
+      child.stdin.end()
+    }
+  })
+}
+
+export async function execGitOrThrow(opts: GitExecOptions): Promise<GitExecResult> {
+  const result = await execGit(opts)
+  if (result.code !== 0) {
+    throw new GitExecError(result, opts.args)
+  }
+  return result
+}

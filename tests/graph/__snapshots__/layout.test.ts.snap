@@ -1,0 +1,35 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`layoutGraph > is stable under snapshot for the merge fixture 1`] = `
+{
+  "laneCount": 2,
+  "rows": [
+    {
+      "lane": 0,
+    },
+    {
+      "lane": 1,
+    },
+    {
+      "lane": 0,
+    },
+    {
+      "lane": 0,
+    },
+  ],
+  "segments": [
+    {
+      "from": 0,
+      "kind": "branch",
+      "row": 0,
+      "to": 1,
+    },
+    {
+      "from": 1,
+      "kind": "merge",
+      "row": 3,
+      "to": 0,
+    },
+  ],
+}
+`;
