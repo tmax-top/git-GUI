@@ -7,7 +7,10 @@ import {
   IPC_EVENTS,
   applyHunkRequestSchema,
   blobRequestSchema,
+  branchDeleteRequestSchema,
+  branchRenameRequestSchema,
   cancelRequestSchema,
+  cherryPickRequestSchema,
   checkoutRequestSchema,
   cloneRequestSchema,
   commitDiffRequestSchema,
@@ -17,25 +20,40 @@ import {
   graphRequestSchema,
   ignoreRequestSchema,
   initRequestSchema,
+  mergeRequestSchema,
+  opRepoSchema,
   openRepoRequestSchema,
   pathsRequestSchema,
   pickDirectorySchema,
+  rebaseInteractiveRequestSchema,
+  rebaseRequestSchema,
   refsRequestSchema,
+  resetRequestSchema,
   sessionPatchSchema,
   settingsPatchSchema,
+  stashApplyRequestSchema,
+  stashDropRequestSchema,
+  stashPushRequestSchema,
   syncRequestSchema,
+  tagCreateRequestSchema,
+  tagDeleteRequestSchema,
   watchRequestSchema,
-  worktreeFileSchema
+  worktreeAddRequestSchema,
+  worktreeFileSchema,
+  worktreeRemoveRequestSchema
 } from '../shared/ipc'
 import type {
   AppInfoDto,
   BlobDto,
   CommitDto,
+  ConflictsDto,
   GitStatusDto,
   GraphPageDto,
+  OpStateDto,
   ProgressEventDto,
   RefsDto,
-  RepoValidateDto
+  RepoValidateDto,
+  WorktreeInfoDto
 } from '../shared/ipc'
 import {
   addToGitignore,
@@ -63,7 +81,27 @@ import {
   pull,
   push,
   addPaths,
-  unstagePaths
+  unstagePaths,
+  getOpState,
+  merge,
+  abortOp,
+  continueOp,
+  skipOp,
+  rebase,
+  rebaseInteractive,
+  cherryPick,
+  revertCommits,
+  reset,
+  stashPush,
+  stashApply,
+  stashDrop,
+  tagCreate,
+  tagDelete,
+  deleteBranch,
+  renameBranch,
+  listWorktrees,
+  addWorktree,
+  removeWorktree
 } from './git'
 import { loadSession, loadSettings, updateSession, updateSettings } from './settings'
 import { RepoWatcher } from './watcher'
@@ -310,6 +348,99 @@ export function registerIpcHandlers(): void {
     await mkdir(repoPath, { recursive: true })
     await initRepo(repoPath, arg.defaultBranch)
     return { repoPath }
+  })
+
+  // --- P3 advanced operations ----------------------------------------------
+  handle(IPC.gitOpState, opRepoSchema, async (arg): Promise<OpStateDto> =>
+    getOpState(arg.repoPath)
+  )
+
+  handle(IPC.gitMerge, mergeRequestSchema, async (arg): Promise<ConflictsDto> =>
+    merge(arg.repoPath, arg.branch, {
+      noFF: arg.noFF,
+      ffOnly: arg.ffOnly,
+      message: arg.message
+    })
+  )
+
+  handle(IPC.gitOpContinue, opRepoSchema, async (arg): Promise<ConflictsDto> =>
+    continueOp(arg.repoPath)
+  )
+
+  handle(IPC.gitOpAbort, opRepoSchema, async (arg) => {
+    await abortOp(arg.repoPath)
+  })
+
+  handle(IPC.gitOpSkip, opRepoSchema, async (arg): Promise<ConflictsDto> => skipOp(arg.repoPath))
+
+  handle(IPC.gitRebase, rebaseRequestSchema, async (arg): Promise<ConflictsDto> =>
+    rebase(arg.repoPath, arg.upstream, { autostash: arg.autostash })
+  )
+
+  handle(
+    IPC.gitRebaseInteractive,
+    rebaseInteractiveRequestSchema,
+    async (arg): Promise<ConflictsDto> =>
+      rebaseInteractive(arg.repoPath, arg.upstream, arg.ops, { autostash: arg.autostash })
+  )
+
+  handle(IPC.gitCherryPick, cherryPickRequestSchema, async (arg): Promise<ConflictsDto> =>
+    cherryPick(arg.repoPath, arg.oids, { mainline: arg.mainline })
+  )
+
+  handle(IPC.gitRevert, cherryPickRequestSchema, async (arg): Promise<ConflictsDto> =>
+    revertCommits(arg.repoPath, arg.oids, { mainline: arg.mainline })
+  )
+
+  handle(IPC.gitReset, resetRequestSchema, async (arg) => {
+    await reset(arg.repoPath, arg.mode, arg.target)
+  })
+
+  handle(IPC.gitStashPush, stashPushRequestSchema, async (arg) => {
+    await stashPush(arg.repoPath, {
+      message: arg.message,
+      untracked: arg.untracked,
+      staged: arg.staged
+    })
+  })
+
+  handle(IPC.gitStashApply, stashApplyRequestSchema, async (arg): Promise<ConflictsDto> =>
+    stashApply(arg.repoPath, arg.ref, { pop: arg.pop })
+  )
+
+  handle(IPC.gitStashDrop, stashDropRequestSchema, async (arg) => {
+    await stashDrop(arg.repoPath, arg.ref)
+  })
+
+  handle(IPC.gitTagCreate, tagCreateRequestSchema, async (arg) => {
+    await tagCreate(arg.repoPath, arg.name, { message: arg.message, oid: arg.oid })
+  })
+
+  handle(IPC.gitTagDelete, tagDeleteRequestSchema, async (arg) => {
+    await tagDelete(arg.repoPath, arg.names)
+  })
+
+  handle(IPC.gitBranchDelete, branchDeleteRequestSchema, async (arg) => {
+    await deleteBranch(arg.repoPath, arg.name, arg.force)
+  })
+
+  handle(IPC.gitBranchRename, branchRenameRequestSchema, async (arg) => {
+    await renameBranch(arg.repoPath, arg.from, arg.to)
+  })
+
+  handle(IPC.worktreeList, opRepoSchema, async (arg): Promise<WorktreeInfoDto[]> =>
+    listWorktrees(arg.repoPath)
+  )
+
+  handle(IPC.worktreeAdd, worktreeAddRequestSchema, async (arg) => {
+    await addWorktree(arg.repoPath, arg.path, {
+      branch: arg.branch,
+      startPoint: arg.startPoint
+    })
+  })
+
+  handle(IPC.worktreeRemove, worktreeRemoveRequestSchema, async (arg) => {
+    await removeWorktree(arg.repoPath, arg.path, arg.force)
   })
 
   // --- watcher -------------------------------------------------------------

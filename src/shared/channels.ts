@@ -31,7 +31,27 @@ export const IPC = {
   gitClone: 'git:clone',
   gitInit: 'git:init',
   watchStart: 'watch:start',
-  watchStop: 'watch:stop'
+  watchStop: 'watch:stop',
+  gitMerge: 'git:merge',
+  gitOpState: 'git:opState',
+  gitOpContinue: 'git:opContinue',
+  gitOpAbort: 'git:opAbort',
+  gitOpSkip: 'git:opSkip',
+  gitRebase: 'git:rebase',
+  gitRebaseInteractive: 'git:rebaseInteractive',
+  gitCherryPick: 'git:cherryPick',
+  gitRevert: 'git:revert',
+  gitReset: 'git:reset',
+  gitStashPush: 'git:stashPush',
+  gitStashApply: 'git:stashApply',
+  gitStashDrop: 'git:stashDrop',
+  gitTagCreate: 'git:tagCreate',
+  gitTagDelete: 'git:tagDelete',
+  gitBranchDelete: 'git:branchDelete',
+  gitBranchRename: 'git:branchRename',
+  worktreeList: 'worktree:list',
+  worktreeAdd: 'worktree:add',
+  worktreeRemove: 'worktree:remove'
 } as const
 
 export const IPC_EVENTS = {

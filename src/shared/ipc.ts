@@ -131,6 +131,35 @@ export interface ProgressEventDto {
 
 export type Language = AppSettingsDto['language']
 
+/** In-progress merge/rebase/cherry-pick/revert detection result. */
+export interface OpStateDto {
+  kind: 'merge' | 'rebase' | 'cherry-pick' | 'revert' | null
+  conflicts: string[]
+  rebaseCurrent?: number
+  rebaseTotal?: number
+}
+
+/** Result of a history mutation that may stop on conflicts. */
+export interface ConflictsDto {
+  conflicts: string[]
+}
+
+export interface RebaseOpDto {
+  oid: string
+  action: 'pick' | 'reword' | 'squash' | 'fixup' | 'drop'
+  message?: string
+}
+
+export interface WorktreeInfoDto {
+  path: string
+  head?: string
+  branch?: string
+  bare?: boolean
+  detached?: boolean
+  locked?: boolean
+  prunable?: boolean
+}
+
 // ---------------------------------------------------------------------------
 // Request schemas
 // ---------------------------------------------------------------------------
@@ -225,6 +254,110 @@ export const initRequestSchema = z.object({
 })
 
 export const openRepoRequestSchema = z.object({ path: repoPathSchema })
+
+// --- P3 advanced operations -----------------------------------------------
+const oidSchema = z.string().regex(/^[0-9a-f]{7,40}$/, 'invalid oid')
+const refSchema = z.string().min(1).max(4096)
+
+export const mergeRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  branch: refSchema,
+  noFF: z.boolean().optional(),
+  ffOnly: z.boolean().optional(),
+  message: z.string().max(65_536).optional()
+})
+
+export const opRepoSchema = z.object({ repoPath: repoPathSchema })
+
+export const rebaseRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  upstream: refSchema,
+  autostash: z.boolean().optional()
+})
+
+export const rebaseInteractiveRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  upstream: refSchema,
+  autostash: z.boolean().optional(),
+  ops: z
+    .array(
+      z.object({
+        oid: oidSchema,
+        action: z.enum(['pick', 'reword', 'squash', 'fixup', 'drop']),
+        message: z.string().max(65_536).optional()
+      })
+    )
+    .min(1)
+    .max(1000)
+})
+
+export const cherryPickRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  oids: z.array(oidSchema).min(1).max(1000),
+  mainline: z.number().int().min(1).max(10).optional()
+})
+
+export const resetRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  mode: z.enum(['soft', 'mixed', 'hard']),
+  target: refSchema
+})
+
+export const stashPushRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  message: z.string().max(65_536).optional(),
+  untracked: z.boolean().optional(),
+  staged: z.boolean().optional()
+})
+
+export const stashApplyRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  ref: refSchema.optional(),
+  pop: z.boolean().optional()
+})
+
+export const stashDropRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  ref: refSchema.optional()
+})
+
+export const tagCreateRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  name: z.string().min(1).max(255),
+  message: z.string().max(65_536).optional(),
+  oid: oidSchema.optional()
+})
+
+export const tagDeleteRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  names: z.array(z.string().min(1).max(255)).min(1).max(100)
+})
+
+export const branchDeleteRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  name: z.string().min(1).max(4096),
+  force: z.boolean().optional()
+})
+
+export const branchRenameRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  from: z.string().min(1).max(4096),
+  to: z.string().min(1).max(4096)
+})
+
+export const worktreeAddRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  path: z.string().min(1).max(4096),
+  branch: z.string().min(1).max(4096).optional(),
+  startPoint: z.string().min(1).max(4096).optional()
+})
+
+export const worktreeRemoveRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  path: z.string().min(1).max(4096),
+  force: z.boolean().optional()
+})
+
 
 export const watchRequestSchema = z.object({ repoPath: repoPathSchema })
 

@@ -3,13 +3,17 @@ import type {
   AppInfoDto,
   AppSettingsDto,
   BlobDto,
+  ConflictsDto,
   GitStatusDto,
   GraphPageDto,
   Language,
+  OpStateDto,
   ProgressEventDto,
   RefsDto,
+  RebaseOpDto,
   RepoValidateDto,
-  SessionStateDto
+  SessionStateDto,
+  WorktreeInfoDto
 } from '../shared/ipc'
 // NOTE: sandboxed preload cannot require external modules (e.g. zod) — channel
 // constants live in their own dependency-free module.
@@ -78,6 +82,56 @@ export interface GitGuiApi {
   }): Promise<void>
   gitInit(args: { dir: string; name: string; defaultBranch: string }): Promise<{ repoPath: string }>
 
+  gitOpState(repoPath: string): Promise<OpStateDto>
+  gitMerge(args: {
+    repoPath: string
+    branch: string
+    noFF?: boolean
+    ffOnly?: boolean
+    message?: string
+  }): Promise<ConflictsDto>
+  gitOpContinue(repoPath: string): Promise<ConflictsDto>
+  gitOpAbort(repoPath: string): Promise<void>
+  gitOpSkip(repoPath: string): Promise<ConflictsDto>
+  gitRebase(args: {
+    repoPath: string
+    upstream: string
+    autostash?: boolean
+  }): Promise<ConflictsDto>
+  gitRebaseInteractive(args: {
+    repoPath: string
+    upstream: string
+    autostash?: boolean
+    ops: RebaseOpDto[]
+  }): Promise<ConflictsDto>
+  gitCherryPick(args: {
+    repoPath: string
+    oids: string[]
+    mainline?: number
+  }): Promise<ConflictsDto>
+  gitRevert(args: { repoPath: string; oids: string[]; mainline?: number }): Promise<ConflictsDto>
+  gitReset(args: { repoPath: string; mode: 'soft' | 'mixed' | 'hard'; target: string }): Promise<void>
+  gitStashPush(args: {
+    repoPath: string
+    message?: string
+    untracked?: boolean
+    staged?: boolean
+  }): Promise<void>
+  gitStashApply(args: { repoPath: string; ref?: string; pop?: boolean }): Promise<ConflictsDto>
+  gitStashDrop(args: { repoPath: string; ref?: string }): Promise<void>
+  gitTagCreate(args: { repoPath: string; name: string; message?: string; oid?: string }): Promise<void>
+  gitTagDelete(args: { repoPath: string; names: string[] }): Promise<void>
+  gitBranchDelete(args: { repoPath: string; name: string; force?: boolean }): Promise<void>
+  gitBranchRename(args: { repoPath: string; from: string; to: string }): Promise<void>
+  worktreeList(repoPath: string): Promise<WorktreeInfoDto[]>
+  worktreeAdd(args: {
+    repoPath: string
+    path: string
+    branch?: string
+    startPoint?: string
+  }): Promise<void>
+  worktreeRemove(args: { repoPath: string; path: string; force?: boolean }): Promise<void>
+
   watchStart(repoPath: string): Promise<void>
   watchStop(repoPath: string): Promise<void>
 
@@ -119,6 +173,27 @@ const api: GitGuiApi = {
   gitCancel: (opId) => ipcRenderer.invoke(IPC.gitCancel, { opId }),
   gitClone: (args) => ipcRenderer.invoke(IPC.gitClone, args),
   gitInit: (args) => ipcRenderer.invoke(IPC.gitInit, args),
+
+  gitOpState: (repoPath) => ipcRenderer.invoke(IPC.gitOpState, { repoPath }),
+  gitMerge: (args) => ipcRenderer.invoke(IPC.gitMerge, args),
+  gitOpContinue: (repoPath) => ipcRenderer.invoke(IPC.gitOpContinue, { repoPath }),
+  gitOpAbort: (repoPath) => ipcRenderer.invoke(IPC.gitOpAbort, { repoPath }),
+  gitOpSkip: (repoPath) => ipcRenderer.invoke(IPC.gitOpSkip, { repoPath }),
+  gitRebase: (args) => ipcRenderer.invoke(IPC.gitRebase, args),
+  gitRebaseInteractive: (args) => ipcRenderer.invoke(IPC.gitRebaseInteractive, args),
+  gitCherryPick: (args) => ipcRenderer.invoke(IPC.gitCherryPick, args),
+  gitRevert: (args) => ipcRenderer.invoke(IPC.gitRevert, args),
+  gitReset: (args) => ipcRenderer.invoke(IPC.gitReset, args),
+  gitStashPush: (args) => ipcRenderer.invoke(IPC.gitStashPush, args),
+  gitStashApply: (args) => ipcRenderer.invoke(IPC.gitStashApply, args),
+  gitStashDrop: (args) => ipcRenderer.invoke(IPC.gitStashDrop, args),
+  gitTagCreate: (args) => ipcRenderer.invoke(IPC.gitTagCreate, args),
+  gitTagDelete: (args) => ipcRenderer.invoke(IPC.gitTagDelete, args),
+  gitBranchDelete: (args) => ipcRenderer.invoke(IPC.gitBranchDelete, args),
+  gitBranchRename: (args) => ipcRenderer.invoke(IPC.gitBranchRename, args),
+  worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),
+  worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
+  worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),
 
   watchStart: (repoPath) => ipcRenderer.invoke(IPC.watchStart, { repoPath }),
   watchStop: (repoPath) => ipcRenderer.invoke(IPC.watchStop, { repoPath }),
