@@ -102,7 +102,13 @@ export function CloneDialog(props: { onClose: () => void }): React.JSX.Element {
         <label className="block">
           <span className="mb-1 block text-zinc-400">{t('clone.dir')}</span>
           <div className="flex gap-2">
-            <input className={inputClass()} value={dir ?? ''} readOnly placeholder={t('clone.pickDir')} />
+            <input
+              className={inputClass()}
+              value={dir ?? ''}
+              placeholder={t('clone.pickDir')}
+              onChange={(e) => setDir(e.target.value || null)}
+              disabled={cloning}
+            />
             <button className={btnGhost()} onClick={() => void pickDir()} disabled={cloning}>
               …
             </button>
@@ -197,7 +203,12 @@ export function InitDialog(props: { onClose: () => void }): React.JSX.Element {
         <label className="block">
           <span className="mb-1 block text-zinc-400">{t('init.dir')}</span>
           <div className="flex gap-2">
-            <input className={inputClass()} value={dir ?? ''} readOnly placeholder={t('clone.pickDir')} />
+            <input
+              className={inputClass()}
+              value={dir ?? ''}
+              placeholder={t('clone.pickDir')}
+              onChange={(e) => setDir(e.target.value || null)}
+            />
             <button className={btnGhost()} onClick={() => void pickDir()}>
               …
             </button>
