@@ -7,7 +7,8 @@ export interface GraphSegment {
   row: number
   fromLane: number
   toLane: number
-  kind: 'straight' | 'merge' | 'branch'
+  /** converge = extra lanes joining THIS commit's dot; merge/branch live in the gap below. */
+  kind: 'converge' | 'merge' | 'branch'
 }
 
 export interface GraphRow {
@@ -50,7 +51,7 @@ export function layoutGraph(nodes: GraphNodeInput[]): GraphLayout {
     if (matches.length > 0) {
       primary = matches[0]
       for (let m = 1; m < matches.length; m++) {
-        segments.push({ row, fromLane: matches[m], toLane: primary, kind: 'merge' })
+        segments.push({ row, fromLane: matches[m], toLane: primary, kind: 'converge' })
         lanes[matches[m]] = undefined
       }
       lanes[primary] = undefined

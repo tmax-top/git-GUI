@@ -121,10 +121,15 @@ export function CommitGraph(): React.JSX.Element {
       const row = layout.rows[ci]
       if (!row) continue
 
-      // Vertical continuations in the gap below this row.
+      // Vertical continuations in the gap below this row — skipped for lanes a
+      // branch segment is opening in this same gap (the curve is the only
+      // connector there; a parallel vertical would leave a free-floating tip).
       if (i < totalRows - 1) {
-        ctx.strokeStyle = color(0)
+        const branchOpened = new Set(
+          layout.segments.filter((s) => s.row === ci && s.kind === 'branch').map((s) => s.toLane)
+        )
         for (const lane of row.activeBelow) {
+          if (branchOpened.has(lane)) continue
           ctx.strokeStyle = color(lane)
           ctx.lineWidth = 2
           ctx.beginPath()
@@ -134,11 +139,22 @@ export function CommitGraph(): React.JSX.Element {
         }
       }
 
-      // Branch / merge segments to the row below.
+      // Segments: converge joins extra lanes into this commit's dot (same row);
+      // merge/branch live in the gap below.
       for (const seg of layout.segments) {
         if (seg.row !== ci) continue
         const x1 = cx(seg.fromLane)
         const x2 = cx(seg.toLane)
+        if (seg.kind === 'converge') {
+          ctx.strokeStyle = color(seg.fromLane)
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.moveTo(x1, y)
+          const midX = (x1 + x2) / 2
+          ctx.bezierCurveTo(midX, y - 6, midX, y - 6, x2, y)
+          ctx.stroke()
+          continue
+        }
         const y2 = y + ROW_H
         ctx.strokeStyle = color(seg.fromLane)
         ctx.lineWidth = 2

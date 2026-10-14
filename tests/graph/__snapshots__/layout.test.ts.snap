@@ -26,7 +26,7 @@ exports[`layoutGraph > is stable under snapshot for the merge fixture 1`] = `
     },
     {
       "from": 1,
-      "kind": "merge",
+      "kind": "converge",
       "row": 3,
       "to": 0,
     },
