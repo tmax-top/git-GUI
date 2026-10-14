@@ -78,7 +78,34 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
     }
   }, [lastIndex, totalRows, hasMore, graphLoading, loadMore])
 
-  const laneColW = Math.max(layout.laneCount, 1) * LANE_W + PAD_X * 2
+  // Lane column width follows the lanes actually used by VISIBLE rows, not the
+  // all-time peak (`layout.laneCount`). A deep history with one wide merge would
+  // otherwise pin the graph column open and leave a huge gap before Subject.
+  const visibleMaxLane = useMemo(() => {
+    let max = 0
+    const touch = (lane: number): void => {
+      if (lane > max) max = lane
+    }
+    for (const v of items) {
+      if (v.index === 0) continue // WIP row draws on lane 0
+      const row = layout.rows[v.index - 1]
+      if (!row) continue
+      touch(row.lane)
+      for (const lane of row.activeBelow) touch(lane)
+    }
+    // Segment endpoints on visible rows (curves must not be clipped).
+    const visibleRows = new Set<number>()
+    for (const v of items) if (v.index > 0) visibleRows.add(v.index - 1)
+    for (const seg of layout.segments) {
+      if (visibleRows.has(seg.row)) {
+        touch(seg.fromLane)
+        touch(seg.toLane)
+      }
+    }
+    return max
+  }, [items, layout])
+
+  const laneColW = Math.max(visibleMaxLane + 1, 1) * LANE_W + PAD_X * 2
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // Redraw visible lanes on the overlay canvas.
