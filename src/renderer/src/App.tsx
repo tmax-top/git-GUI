@@ -36,11 +36,13 @@ export default function App(): React.JSX.Element {
 
   if (!booted) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-950 text-zinc-500">
-        {t('common.loading')}
+      <div className="theme-white">
+        <div className="flex h-screen items-center justify-center bg-zinc-950 text-zinc-500">
+          {t('common.loading')}
+        </div>
       </div>
     )
   }
 
-  return view === 'repo' ? <AppShell /> : <StartPage />
+  return <div className="theme-white">{view === 'repo' ? <AppShell /> : <StartPage />}</div>
 }

@@ -76,7 +76,7 @@ export function LeftPanel(): React.JSX.Element {
   }
 
   return (
-    <aside className="w-56 shrink-0 overflow-y-auto border-r border-zinc-800 bg-zinc-950 pb-4">
+    <aside className="theme-cream w-56 shrink-0 overflow-y-auto border-r border-zinc-800 bg-zinc-950 pb-4">
       <Section title={t('left.branchesLocal')} count={local.length} defaultOpen>
         {local.map((b) => (
           <Row
