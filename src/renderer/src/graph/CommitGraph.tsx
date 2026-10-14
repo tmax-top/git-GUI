@@ -157,7 +157,7 @@ export function CommitGraph(): React.JSX.Element {
       const isSelected = selection.kind === 'commit' && selection.oid === row.oid
       ctx.beginPath()
       ctx.arc(cx(row.lane), y, isSelected ? RADIUS + 1.5 : RADIUS, 0, Math.PI * 2)
-      ctx.fillStyle = '#f6efdb'
+      ctx.fillStyle = '#f8f5e9'
       ctx.fill()
       ctx.lineWidth = 2.5
       ctx.strokeStyle = color(row.lane)
