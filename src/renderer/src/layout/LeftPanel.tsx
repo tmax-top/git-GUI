@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../store'
-import { t } from '../i18n'
+import { t, tf } from '../i18n'
 
 function Section(props: {
   title: string
@@ -31,6 +31,7 @@ function Row(props: {
   badge?: string
   badgeColor?: string
   onClick?: () => void
+  onContextMenu?: (e: React.MouseEvent) => void
   title?: string
 }): React.JSX.Element {
   return (
@@ -39,6 +40,7 @@ function Row(props: {
         props.active ? 'bg-zinc-800 text-emerald-400' : 'text-zinc-300'
       }`}
       onClick={props.onClick}
+      onContextMenu={props.onContextMenu}
       title={props.title ?? props.label}
     >
       {props.active && <span className="text-emerald-500">●</span>}
@@ -59,6 +61,16 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
   const refs = useApp((s) => s.refs)
   const checkout = useApp((s) => s.checkout)
   const repoPath = useApp((s) => s.repoPath)
+  const openMenu = useApp((s) => s.openMenu)
+  const merge = useApp((s) => s.merge)
+  const rebase = useApp((s) => s.rebase)
+  const branchDelete = useApp((s) => s.branchDelete)
+  const branchRename = useApp((s) => s.branchRename)
+  const tagDelete = useApp((s) => s.tagDelete)
+  const stashApply = useApp((s) => s.stashApply)
+  const stashDrop = useApp((s) => s.stashDrop)
+  const setConfirm = useApp((s) => s.setConfirm)
+  const setPrompt = useApp((s) => s.setPrompt)
   const [error, setError] = useState<string | null>(null)
 
   const local = (refs?.branches ?? []).filter((b) => !b.isRemote)
@@ -66,12 +78,132 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
   const tags = refs?.tags ?? []
   const stashes = refs?.stashes ?? []
   const submodules = refs?.submodules ?? []
+  const current = refs?.current
 
   const doCheckout = (target: string): void => {
     setError(null)
     void checkout(target).then(() => {
       const err = useApp.getState().error
       if (err) setError(err)
+    })
+  }
+
+  const onBranchContextMenu = (e: React.MouseEvent, name: string): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    const isCurrent = current === name
+    openMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        {
+          label: t('menu.checkout'),
+          disabled: isCurrent,
+          onClick: () => doCheckout(name)
+        },
+        {
+          label: t('menu.mergeInto'),
+          disabled: isCurrent,
+          onClick: () => void merge(name)
+        },
+        {
+          label: t('menu.rebaseOnto'),
+          disabled: isCurrent,
+          onClick: () => void rebase(name)
+        },
+        { separator: true },
+        {
+          label: t('menu.rename'),
+          onClick: () =>
+            setPrompt({
+              title: t('prompt.renameTitle'),
+              label: t('prompt.renameName'),
+              defaultValue: name,
+              onSubmit: (to) => void branchRename(name, to.trim())
+            })
+        },
+        {
+          label: t('menu.delete'),
+          danger: true,
+          disabled: isCurrent,
+          onClick: () =>
+            setConfirm({
+              title: t('menu.delete'),
+              body: tf('menu.deleteConfirm', { name }),
+              confirmLabel: t('menu.delete'),
+              danger: true,
+              onConfirm: () => void branchDelete(name)
+            })
+        },
+        {
+          label: t('menu.deleteForce'),
+          danger: true,
+          disabled: isCurrent,
+          onClick: () =>
+            setConfirm({
+              title: t('menu.deleteForce'),
+              body: tf('menu.deleteConfirm', { name }),
+              confirmLabel: t('menu.deleteForce'),
+              danger: true,
+              onConfirm: () => void branchDelete(name, true)
+            })
+        }
+      ]
+    })
+  }
+
+  const onTagContextMenu = (e: React.MouseEvent, name: string): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    openMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        {
+          label: t('menu.delete'),
+          danger: true,
+          onClick: () =>
+            setConfirm({
+              title: t('menu.delete'),
+              body: tf('menu.deleteTagConfirm', { name }),
+              confirmLabel: t('menu.delete'),
+              danger: true,
+              onConfirm: () => void tagDelete([name])
+            })
+        }
+      ]
+    })
+  }
+
+  const onStashContextMenu = (e: React.MouseEvent, ref: string, label: string): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    openMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        {
+          label: t('menu.applyStash'),
+          onClick: () => void stashApply(ref, false)
+        },
+        {
+          label: t('menu.popStash'),
+          onClick: () => void stashApply(ref, true)
+        },
+        { separator: true },
+        {
+          label: t('menu.dropStash'),
+          danger: true,
+          onClick: () =>
+            setConfirm({
+              title: t('menu.dropStash'),
+              body: tf('menu.dropStashConfirm', { name: label }),
+              confirmLabel: t('menu.dropStash'),
+              danger: true,
+              onConfirm: () => void stashDrop(ref)
+            })
+        }
+      ]
     })
   }
 
@@ -89,6 +221,7 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
             badge={refs?.current === b.name ? t('left.current') : undefined}
             badgeColor="#15803d"
             onClick={() => doCheckout(b.name)}
+            onContextMenu={(e) => onBranchContextMenu(e, b.name)}
           />
         ))}
       </Section>
@@ -105,19 +238,30 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
               const candidate = parts.length > 1 ? parts.slice(1).join('/') : b.name
               doCheckout(candidate)
             }}
+            onContextMenu={(e) => onBranchContextMenu(e, b.name)}
           />
         ))}
       </Section>
 
       <Section title={t('left.tags')} count={tags.length} defaultOpen={false}>
         {tags.map((tag) => (
-          <Row key={tag.fullName} label={tag.name} badgeColor="#b45309" />
+          <Row
+            key={tag.fullName}
+            label={tag.name}
+            badgeColor="#b45309"
+            onContextMenu={(e) => onTagContextMenu(e, tag.name)}
+          />
         ))}
       </Section>
 
       <Section title={t('left.stash')} count={stashes.length}>
         {stashes.map((s) => (
-          <Row key={s.oid} label={`${s.ref} ${s.subject}`} badgeColor="#6d28d9" />
+          <Row
+            key={s.oid}
+            label={`${s.ref} ${s.subject}`}
+            badgeColor="#6d28d9"
+            onContextMenu={(e) => onStashContextMenu(e, s.ref, `${s.ref} ${s.subject}`)}
+          />
         ))}
       </Section>
 

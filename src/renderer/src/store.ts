@@ -3,13 +3,16 @@ import { buildHunkPatch, parseUnifiedDiff, type DiffFile } from '@shared/diff'
 import type {
   AppSettingsDto,
   CommitDto,
+  ConflictsDto,
   GitStatusDto,
+  OpStateDto,
   ProgressEventDto,
   RefsDto,
   StatusFileDto
 } from '@shared/ipc'
 import { isUntracked, stagedFiles, untrackedFiles } from '@shared/status'
 import { setLocale, t, type Locale } from './i18n'
+import type { ContextMenuEntry } from './components/ContextMenu'
 
 export type Selection =
   | { kind: 'wip' }
@@ -34,6 +37,21 @@ export interface PushConflictState {
   kind: 'push-rejected'
 }
 
+export interface MenuState {
+  x: number
+  y: number
+  items: ContextMenuEntry[]
+}
+
+export interface PromptState {
+  title: string
+  label?: string
+  defaultValue?: string
+  confirmLabel?: string
+  danger?: boolean
+  onSubmit: (value: string) => void | Promise<void>
+}
+
 interface AppState {
   booted: boolean
   view: 'start' | 'repo'
@@ -52,12 +70,16 @@ interface AppState {
   confirm: ConfirmState | null
   pushConflict: boolean
   settings: AppSettingsDto
+  opState: OpStateDto | null
+  menu: MenuState | null
+  prompt: PromptState | null
 
   boot(): Promise<void>
   openRepo(path: string): Promise<boolean>
   closeRepo(): Promise<void>
   refreshAll(): Promise<void>
   refreshStatus(): Promise<void>
+  refreshOpState(): Promise<void>
   loadGraph(reset: boolean): Promise<void>
   loadMore(): Promise<void>
 
@@ -80,7 +102,26 @@ interface AppState {
   push(forceWithLease?: boolean): Promise<void>
   cancelSync(): Promise<void>
 
+  merge(branch: string, opts?: { noFF?: boolean; ffOnly?: boolean; message?: string }): Promise<void>
+  rebase(upstream: string, opts?: { autostash?: boolean }): Promise<void>
+  cherryPick(oids: string[], mainline?: number): Promise<void>
+  revert(oids: string[], mainline?: number): Promise<void>
+  reset(mode: 'soft' | 'mixed' | 'hard', target: string): Promise<void>
+  opContinue(): Promise<void>
+  opAbort(): Promise<void>
+  opSkip(): Promise<void>
+  stashPush(opts?: { message?: string; untracked?: boolean; staged?: boolean }): Promise<void>
+  stashApply(ref?: string, pop?: boolean): Promise<void>
+  stashDrop(ref?: string): Promise<void>
+  tagCreate(name: string, message?: string, oid?: string): Promise<void>
+  tagDelete(names: string[]): Promise<void>
+  branchDelete(name: string, force?: boolean): Promise<void>
+  branchRename(from: string, to: string): Promise<void>
+
   setConfirm(state: ConfirmState | null): void
+  openMenu(state: MenuState): void
+  closeMenu(): void
+  setPrompt(state: PromptState | null): void
   dismissError(): void
   setPushConflict(v: boolean): void
   updateSettings(patch: Partial<AppSettingsDto>): Promise<void>
@@ -135,16 +176,17 @@ export const useApp = create<AppState>((set, get) => {
     const repoPath = get().repoPath
     if (!repoPath) return
     try {
-      const [status, refs] = await Promise.all([
+      const [status, refs, opState] = await Promise.all([
         window.api.gitStatus(repoPath),
-        window.api.gitRefs(repoPath)
+        window.api.gitRefs(repoPath),
+        window.api.gitOpState(repoPath)
       ])
       const prevRefs = get().refs
       const refsKey = (r: RefsDto | null): string =>
         r ? r.branches.map((b) => `${b.name}=${b.oid}`).join(',') : ''
       const refsChanged = refsKey(prevRefs) !== refsKey(refs)
       const headChanged = get().status?.oid !== status.oid
-      set({ status, refs })
+      set({ status, refs, opState })
       if (headChanged || refsChanged) {
         await get().loadGraph(true)
       }
@@ -155,6 +197,18 @@ export const useApp = create<AppState>((set, get) => {
     } catch (e) {
       set({ error: errText(e) })
     }
+  }
+
+  /** Run a history mutation that may stop on conflicts, then resync everything. */
+  async function runHistoryOp(fn: () => Promise<ConflictsDto | void>): Promise<void> {
+    const repoPath = get().repoPath
+    if (!repoPath) return
+    try {
+      await fn()
+    } catch (e) {
+      set({ error: errText(e) })
+    }
+    await get().refreshAll()
   }
 
   return {
@@ -174,6 +228,9 @@ export const useApp = create<AppState>((set, get) => {
     error: null,
     confirm: null,
     pushConflict: false,
+    opState: null,
+    menu: null,
+    prompt: null,
     settings: {
       favorites: [],
       recent: [],
@@ -248,7 +305,10 @@ export const useApp = create<AppState>((set, get) => {
           selection: { kind: 'wip' },
           diff: '',
           diffFiles: [],
-          error: null
+          error: null,
+          opState: null,
+          menu: null,
+          prompt: null
         })
         await window.api.watchStart(path)
         void window.api.sessionSet({ openRepos: [path], activeRepo: path })
@@ -274,13 +334,30 @@ export const useApp = create<AppState>((set, get) => {
         selection: { kind: 'wip' },
         diff: '',
         diffFiles: [],
-        sync: null
+        sync: null,
+        opState: null,
+        menu: null,
+        prompt: null
       })
       void window.api.sessionSet({ activeRepo: null })
     },
 
     async refreshAll(): Promise<void> {
-      await Promise.all([get().refreshStatus(), get().loadGraph(true)])
+      await Promise.all([
+        get().refreshStatus(),
+        get().loadGraph(true),
+        get().refreshOpState()
+      ])
+    },
+
+    async refreshOpState(): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      try {
+        set({ opState: await window.api.gitOpState(repoPath) })
+      } catch {
+        /* op-state detection is best-effort */
+      }
     },
 
     async refreshStatus(): Promise<void> {
@@ -502,8 +579,110 @@ export const useApp = create<AppState>((set, get) => {
       if (sync) await window.api.gitCancel(sync.opId)
     },
 
+    async merge(branch, opts): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitMerge({ repoPath, branch, ...opts }))
+    },
+
+    async rebase(upstream, opts): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitRebase({ repoPath, upstream, ...opts }))
+    },
+
+    async cherryPick(oids, mainline): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitCherryPick({ repoPath, oids, mainline }))
+    },
+
+    async revert(oids, mainline): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitRevert({ repoPath, oids, mainline }))
+    },
+
+    async reset(mode, target): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitReset({ repoPath, mode, target }))
+    },
+
+    async opContinue(): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitOpContinue(repoPath))
+    },
+
+    async opAbort(): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitOpAbort(repoPath))
+    },
+
+    async opSkip(): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitOpSkip(repoPath))
+    },
+
+    async stashPush(opts): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitStashPush({ repoPath, ...opts }))
+    },
+
+    async stashApply(ref, pop): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitStashApply({ repoPath, ref, pop }))
+    },
+
+    async stashDrop(ref): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitStashDrop({ repoPath, ref }))
+    },
+
+    async tagCreate(name, message, oid): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitTagCreate({ repoPath, name, message, oid }))
+    },
+
+    async tagDelete(names): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitTagDelete({ repoPath, names }))
+    },
+
+    async branchDelete(name, force): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitBranchDelete({ repoPath, name, force }))
+    },
+
+    async branchRename(from, to): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await runHistoryOp(() => window.api.gitBranchRename({ repoPath, from, to }))
+    },
+
     setConfirm(state): void {
       set({ confirm: state })
+    },
+
+    openMenu(state): void {
+      set({ menu: state })
+    },
+
+    closeMenu(): void {
+      set({ menu: null })
+    },
+
+    setPrompt(state): void {
+      set({ prompt: state })
     },
 
     dismissError(): void {

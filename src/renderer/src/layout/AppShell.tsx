@@ -3,10 +3,13 @@ import { t } from '../i18n'
 import { Toolbar } from './Toolbar'
 import { LeftPanel } from './LeftPanel'
 import { StatusBar } from './StatusBar'
+import { OpBanner } from './OpBanner'
+import { PromptModal } from './PromptModal'
 import { CommitGraph } from '../graph/CommitGraph'
 import { CommitPanel } from '../panel/CommitPanel'
 import { DiffPanel } from '../panel/DiffPanel'
 import { Modal, btnDanger, btnGhost, btnPrimary } from '../components/Modal'
+import { ContextMenu } from '../components/ContextMenu'
 import { Resizer, useResizableSetting } from '../components/Resizer'
 import { useRef, useState } from 'react'
 
@@ -90,6 +93,13 @@ function PushConflictModal(): React.JSX.Element | null {
   )
 }
 
+function GlobalMenu(): React.JSX.Element | null {
+  const menu = useApp((s) => s.menu)
+  const closeMenu = useApp((s) => s.closeMenu)
+  if (!menu) return null
+  return <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={closeMenu} />
+}
+
 export function AppShell(): React.JSX.Element {
   const left = useResizableSetting('leftPanelWidth', 224, 160, 600)
   const right = useResizableSetting('rightPanelWidth', 320, 220, 700)
@@ -105,6 +115,7 @@ export function AppShell(): React.JSX.Element {
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
       <Toolbar />
+      <OpBanner />
       <div className="flex min-h-0 flex-1">
         <LeftPanel width={left.value} />
         <Resizer orientation="vertical" onDelta={left.onDelta} onCommit={left.onCommit} />
@@ -130,6 +141,8 @@ export function AppShell(): React.JSX.Element {
       <StatusBar />
       <ConfirmModal />
       <PushConflictModal />
+      <PromptModal />
+      <GlobalMenu />
     </div>
   )
 }

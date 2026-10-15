@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { layoutGraph } from './layout'
 import { useApp } from '../store'
-import { t } from '../i18n'
+import { t, tf } from '../i18n'
 import { relativeTime } from '../utils/format'
 import { Resizer, useResizableSetting } from '../components/Resizer'
 
@@ -35,6 +35,13 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
   const selectWip = useApp((s) => s.selectWip)
   const selectCommit = useApp((s) => s.selectCommit)
   const loadMore = useApp((s) => s.loadMore)
+  const openMenu = useApp((s) => s.openMenu)
+  const cherryPick = useApp((s) => s.cherryPick)
+  const revert = useApp((s) => s.revert)
+  const reset = useApp((s) => s.reset)
+  const tagCreate = useApp((s) => s.tagCreate)
+  const setConfirm = useApp((s) => s.setConfirm)
+  const setPrompt = useApp((s) => s.setPrompt)
 
   const authorCol = useResizableSetting('graphAuthorWidth', 112, 60, 400)
   const dateCol = useResizableSetting('graphDateWidth', 48, 40, 200)
@@ -224,6 +231,61 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
   const wipCount = (status?.files.length ?? 0) > 0
   const stagedCount = status?.files.filter((f) => f.indexStatus !== ' ' && f.indexStatus !== '?').length ?? 0
 
+  const onCommitContextMenu = (e: React.MouseEvent, oid: string): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    selectCommit(oid)
+    openMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        {
+          label: t('menu.cherryPick'),
+          onClick: () => void cherryPick([oid])
+        },
+        {
+          label: t('menu.revert'),
+          onClick: () => void revert([oid])
+        },
+        { separator: true },
+        {
+          label: t('menu.resetSoft'),
+          onClick: () => void reset('soft', oid)
+        },
+        {
+          label: t('menu.resetMixed'),
+          onClick: () => void reset('mixed', oid)
+        },
+        {
+          label: t('menu.resetHard'),
+          danger: true,
+          onClick: () =>
+            setConfirm({
+              title: t('menu.resetHard'),
+              body: tf('menu.resetHardConfirm', { oid: oid.slice(0, 8) }),
+              confirmLabel: t('menu.resetHard'),
+              danger: true,
+              onConfirm: () => reset('hard', oid)
+            })
+        },
+        { separator: true },
+        {
+          label: t('menu.tagHere'),
+          onClick: () =>
+            setPrompt({
+              title: t('prompt.tagTitle'),
+              label: t('prompt.tagName'),
+              onSubmit: (name) => tagCreate(name.trim(), undefined, oid)
+            })
+        },
+        {
+          label: t('menu.copyOid'),
+          onClick: () => void navigator.clipboard.writeText(oid)
+        }
+      ]
+    })
+  }
+
   // Horizontal scroll sync: the column header lives outside the scroll area
   // (sticky), so it mirrors the body's scrollLeft.
   const headerRef = useRef<HTMLDivElement>(null)
@@ -325,6 +387,9 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
               }`}
               style={{ top: v.start, height: ROW_H }}
               onClick={() => (isWip ? selectWip() : commit && selectCommit(commit.oid))}
+              onContextMenu={(e) => {
+                if (!isWip && commit) onCommitContextMenu(e, commit.oid)
+              }}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
