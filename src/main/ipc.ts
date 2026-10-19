@@ -30,6 +30,7 @@ import {
   conflictFileRequestSchema,
   conflictResolveRequestSchema,
   conflictSideRequestSchema,
+  searchRequestSchema,
   rebaseRequestSchema,
   refsRequestSchema,
   resetRequestSchema,
@@ -109,6 +110,9 @@ import {
   getConflictFile,
   resolveConflict,
   acceptConflictSide,
+  searchCommits,
+  searchFiles,
+  searchContent,
   listWorktrees,
   addWorktree,
   removeWorktree
@@ -408,6 +412,12 @@ export function registerIpcHandlers(): void {
 
   handle(IPC.gitConflictAccept, conflictSideRequestSchema, async (arg) => {
     await acceptConflictSide(arg.repoPath, arg.path, arg.side)
+  })
+
+  handle(IPC.gitSearch, searchRequestSchema, async (arg): Promise<unknown> => {
+    if (arg.scope === 'commits') return searchCommits(arg.repoPath, arg.query, arg.limit)
+    if (arg.scope === 'files') return searchFiles(arg.repoPath, arg.query, arg.limit)
+    return searchContent(arg.repoPath, arg.query, arg.limit)
   })
 
   handle(IPC.gitCherryPick, cherryPickRequestSchema, async (arg): Promise<ConflictsDto> =>

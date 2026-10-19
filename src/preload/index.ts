@@ -14,6 +14,9 @@ import type {
   RebaseOpDto,
   RebaseRangeCommitDto,
   RepoValidateDto,
+  SearchCommitHitDto,
+  SearchContentHitDto,
+  SearchScope,
   SessionStateDto,
   WorktreeInfoDto
 } from '../shared/ipc'
@@ -127,6 +130,12 @@ export interface GitGuiApi {
   gitBranchDelete(args: { repoPath: string; name: string; force?: boolean }): Promise<void>
   gitBranchRename(args: { repoPath: string; from: string; to: string }): Promise<void>
   gitConflictRead(args: { repoPath: string; path: string }): Promise<ConflictFileDto>
+  gitSearch(args: {
+    repoPath: string
+    scope: SearchScope
+    query: string
+    limit?: number
+  }): Promise<SearchCommitHitDto[] | string[] | SearchContentHitDto[]>
   gitConflictResolve(args: { repoPath: string; path: string; content: string }): Promise<void>
   gitConflictAccept(args: {
     repoPath: string
@@ -203,6 +212,7 @@ const api: GitGuiApi = {
   gitBranchDelete: (args) => ipcRenderer.invoke(IPC.gitBranchDelete, args),
   gitBranchRename: (args) => ipcRenderer.invoke(IPC.gitBranchRename, args),
   gitConflictRead: (args) => ipcRenderer.invoke(IPC.gitConflictRead, args),
+  gitSearch: (args) => ipcRenderer.invoke(IPC.gitSearch, args),
   gitConflictResolve: (args) => ipcRenderer.invoke(IPC.gitConflictResolve, args),
   gitConflictAccept: (args) => ipcRenderer.invoke(IPC.gitConflictAccept, args),
   worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),

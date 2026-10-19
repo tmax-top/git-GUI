@@ -53,6 +53,7 @@ export const IPC = {
   gitConflictRead: 'git:conflictRead',
   gitConflictResolve: 'git:conflictResolve',
   gitConflictAccept: 'git:conflictAccept',
+  gitSearch: 'git:search',
   worktreeList: 'worktree:list',
   worktreeAdd: 'worktree:add',
   worktreeRemove: 'worktree:remove'

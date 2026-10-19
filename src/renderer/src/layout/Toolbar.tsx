@@ -15,6 +15,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const settings = useApp((s) => s.settings)
   const updateSettings = useApp((s) => s.updateSettings)
   const closeRepo = useApp((s) => s.closeRepo)
+  const openSearch = useApp((s) => s.openSearch)
 
   const disabled = sync !== null
 
@@ -55,6 +56,14 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
         onClick={() => void push()}
       >
         {t('toolbar.push')}
+      </button>
+
+      <button
+        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800"
+        onClick={openSearch}
+        title={`${t('search.title')} (⌘F)`}
+      >
+        ⌕
       </button>
 
       <button

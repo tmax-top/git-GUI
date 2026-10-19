@@ -34,6 +34,21 @@ export default function App(): React.JSX.Element {
     }
   }, [])
 
+  // Global search shortcut: Cmd/Ctrl+F opens the search dialog in-repo.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+        const st = useApp.getState()
+        if (st.view === 'repo' && st.repoPath) {
+          e.preventDefault()
+          st.openSearch()
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   if (!booted) {
     return (
       <div className="theme-white">

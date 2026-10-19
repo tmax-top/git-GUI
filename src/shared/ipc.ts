@@ -145,6 +145,13 @@ export const conflictFileRequestSchema = z.object({
   path: z.string().min(1).max(4096)
 })
 
+export const searchRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  scope: z.enum(['commits', 'files', 'content']),
+  query: z.string().min(1).max(1000),
+  limit: z.number().int().min(1).max(1000).optional()
+})
+
 export const conflictResolveRequestSchema = z.object({
   repoPath: repoPathSchema,
   path: z.string().min(1).max(4096),
@@ -199,6 +206,22 @@ export interface RebaseRangeCommitDto {
   shortOid: string
   subject: string
 }
+
+export interface SearchCommitHitDto {
+  oid: string
+  shortOid: string
+  subject: string
+  authorName: string
+  authorTime: number
+}
+
+export interface SearchContentHitDto {
+  path: string
+  line: number
+  text: string
+}
+
+export type SearchScope = 'commits' | 'files' | 'content'
 
 export interface WorktreeInfoDto {
   path: string

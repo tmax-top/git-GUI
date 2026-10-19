@@ -86,6 +86,8 @@ interface AppState {
   menu: MenuState | null
   prompt: PromptState | null
   rebaseDialog: RebaseDialogState | null
+  /** Global search dialog visibility (commit / file path / content scopes). */
+  searchOpen: boolean
 
   boot(): Promise<void>
   openRepo(path: string): Promise<boolean>
@@ -124,6 +126,8 @@ interface AppState {
   rebaseInteractive(upstream: string, ops: RebaseOpDto[]): Promise<void>
   openRebaseDialog(state: RebaseDialogState): void
   closeRebaseDialog(): void
+  openSearch(): void
+  closeSearch(): void
   cherryPick(oids: string[], mainline?: number): Promise<void>
   revert(oids: string[], mainline?: number): Promise<void>
   reset(mode: 'soft' | 'mixed' | 'hard', target: string): Promise<void>
@@ -266,6 +270,7 @@ export const useApp = create<AppState>((set, get) => {
     menu: null,
     prompt: null,
     rebaseDialog: null,
+    searchOpen: false,
     settings: {
       favorites: [],
       recent: [],
@@ -346,7 +351,8 @@ export const useApp = create<AppState>((set, get) => {
           opState: null,
           menu: null,
           prompt: null,
-          rebaseDialog: null
+          rebaseDialog: null,
+          searchOpen: false
         })
         await window.api.watchStart(path)
         void window.api.sessionSet({ openRepos: [path], activeRepo: path })
@@ -378,7 +384,8 @@ export const useApp = create<AppState>((set, get) => {
         opState: null,
         menu: null,
         prompt: null,
-        rebaseDialog: null
+        rebaseDialog: null,
+        searchOpen: false
       })
       void window.api.sessionSet({ activeRepo: null })
     },
@@ -675,6 +682,14 @@ export const useApp = create<AppState>((set, get) => {
 
     closeRebaseDialog(): void {
       set({ rebaseDialog: null })
+    },
+
+    openSearch(): void {
+      set({ searchOpen: true })
+    },
+
+    closeSearch(): void {
+      set({ searchOpen: false })
     },
 
     async cherryPick(oids, mainline): Promise<void> {

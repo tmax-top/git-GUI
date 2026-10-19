@@ -63,6 +63,8 @@ export interface LogOptions {
   grep?: string
   /** Parent-before-children ordering — required for stable graph drawing. */
   topo?: boolean
+  /** `--regexp-ignore-case` — for search-style grep queries. */
+  ignoreCase?: boolean
   signal?: AbortSignal
 }
 
@@ -73,6 +75,7 @@ export async function getLog(repoPath: string, opts: LogOptions = {}): Promise<C
   if (opts.limit != null) args.push(`-n`, String(opts.limit))
   if (opts.skip != null) args.push(`--skip=${opts.skip}`)
   if (opts.grep) args.push(`--grep=${opts.grep}`, '--fixed-strings')
+  if (opts.ignoreCase) args.push('--regexp-ignore-case')
   if (opts.paths && opts.paths.length > 0) {
     args.push('--', ...opts.paths)
   }
