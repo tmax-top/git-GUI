@@ -5,6 +5,7 @@ import { LeftPanel } from './LeftPanel'
 import { StatusBar } from './StatusBar'
 import { OpBanner } from './OpBanner'
 import { PromptModal } from './PromptModal'
+import { RebaseDialog } from './RebaseDialog'
 import { CommitGraph } from '../graph/CommitGraph'
 import { CommitPanel } from '../panel/CommitPanel'
 import { DiffPanel } from '../panel/DiffPanel'
@@ -142,6 +143,7 @@ export function AppShell(): React.JSX.Element {
       <ConfirmModal />
       <PushConflictModal />
       <PromptModal />
+      <RebaseDialog />
       <GlobalMenu />
     </div>
   )

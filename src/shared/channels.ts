@@ -39,6 +39,7 @@ export const IPC = {
   gitOpSkip: 'git:opSkip',
   gitRebase: 'git:rebase',
   gitRebaseInteractive: 'git:rebaseInteractive',
+  gitRebaseRange: 'git:rebaseRange',
   gitCherryPick: 'git:cherryPick',
   gitRevert: 'git:revert',
   gitReset: 'git:reset',

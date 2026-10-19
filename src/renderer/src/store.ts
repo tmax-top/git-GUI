@@ -7,6 +7,7 @@ import type {
   GitStatusDto,
   OpStateDto,
   ProgressEventDto,
+  RebaseOpDto,
   RefsDto,
   StatusFileDto
 } from '@shared/ipc'
@@ -52,6 +53,13 @@ export interface PromptState {
   onSubmit: (value: string) => void | Promise<void>
 }
 
+/** Base commit for the interactive-rebase plan panel (replays `base..HEAD`). */
+export interface RebaseDialogState {
+  base: string
+  baseShort: string
+  baseSubject: string
+}
+
 interface AppState {
   booted: boolean
   view: 'start' | 'repo'
@@ -73,6 +81,7 @@ interface AppState {
   opState: OpStateDto | null
   menu: MenuState | null
   prompt: PromptState | null
+  rebaseDialog: RebaseDialogState | null
 
   boot(): Promise<void>
   openRepo(path: string): Promise<boolean>
@@ -104,6 +113,9 @@ interface AppState {
 
   merge(branch: string, opts?: { noFF?: boolean; ffOnly?: boolean; message?: string }): Promise<void>
   rebase(upstream: string, opts?: { autostash?: boolean }): Promise<void>
+  rebaseInteractive(upstream: string, ops: RebaseOpDto[]): Promise<void>
+  openRebaseDialog(state: RebaseDialogState): void
+  closeRebaseDialog(): void
   cherryPick(oids: string[], mainline?: number): Promise<void>
   revert(oids: string[], mainline?: number): Promise<void>
   reset(mode: 'soft' | 'mixed' | 'hard', target: string): Promise<void>
@@ -231,6 +243,7 @@ export const useApp = create<AppState>((set, get) => {
     opState: null,
     menu: null,
     prompt: null,
+    rebaseDialog: null,
     settings: {
       favorites: [],
       recent: [],
@@ -308,7 +321,8 @@ export const useApp = create<AppState>((set, get) => {
           error: null,
           opState: null,
           menu: null,
-          prompt: null
+          prompt: null,
+          rebaseDialog: null
         })
         await window.api.watchStart(path)
         void window.api.sessionSet({ openRepos: [path], activeRepo: path })
@@ -337,7 +351,8 @@ export const useApp = create<AppState>((set, get) => {
         sync: null,
         opState: null,
         menu: null,
-        prompt: null
+        prompt: null,
+        rebaseDialog: null
       })
       void window.api.sessionSet({ activeRepo: null })
     },
@@ -589,6 +604,27 @@ export const useApp = create<AppState>((set, get) => {
       const repoPath = get().repoPath
       if (!repoPath) return
       await runHistoryOp(() => window.api.gitRebase({ repoPath, upstream, ...opts }))
+    },
+
+    async rebaseInteractive(upstream, ops): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      try {
+        await window.api.gitRebaseInteractive({ repoPath, upstream, ops })
+      } catch (e) {
+        set({ error: errText(e) })
+        await get().refreshAll()
+        throw e
+      }
+      await get().refreshAll()
+    },
+
+    openRebaseDialog(state): void {
+      set({ rebaseDialog: state })
+    },
+
+    closeRebaseDialog(): void {
+      set({ rebaseDialog: null })
     },
 
     async cherryPick(oids, mainline): Promise<void> {

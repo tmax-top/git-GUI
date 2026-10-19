@@ -232,6 +232,30 @@ export async function rebase(
   })
 }
 
+/** Commits in `base..HEAD` that `git rebase -i base` would replay, oldest first. */
+export interface RebaseRangeCommit {
+  oid: string
+  shortOid: string
+  subject: string
+}
+
+export async function rebaseRange(repoPath: string, base: string): Promise<RebaseRangeCommit[]> {
+  assertBranchName(base)
+  const { stdout } = await execGitOrThrow({
+    cwd: repoPath,
+    args: ['log', '--reverse', '--format=%H%x00%s', `${base}..HEAD`]
+  })
+  return stdout
+    .split('\n')
+    .filter((line) => line.includes('\x00'))
+    .map((line) => {
+      const nul = line.indexOf('\x00')
+      const oid = line.slice(0, nul)
+      const subject = line.slice(nul + 1)
+      return { oid, shortOid: oid.slice(0, 7), subject }
+    })
+}
+
 export type RebaseAction = 'pick' | 'reword' | 'squash' | 'fixup' | 'drop'
 
 export interface RebaseOp {

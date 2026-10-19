@@ -162,6 +162,13 @@ export interface RebaseOpDto {
   message?: string
 }
 
+/** One commit in the `base..HEAD` range that an interactive rebase would replay. */
+export interface RebaseRangeCommitDto {
+  oid: string
+  shortOid: string
+  subject: string
+}
+
 export interface WorktreeInfoDto {
   path: string
   head?: string
@@ -285,6 +292,11 @@ export const rebaseRequestSchema = z.object({
   repoPath: repoPathSchema,
   upstream: refSchema,
   autostash: z.boolean().optional()
+})
+
+export const rebaseRangeRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  base: refSchema
 })
 
 export const rebaseInteractiveRequestSchema = z.object({

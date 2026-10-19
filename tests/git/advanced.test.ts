@@ -11,6 +11,7 @@ import {
   merge,
   rebase,
   rebaseInteractive,
+  rebaseRange,
   removeWorktree,
   renameBranch,
   revertCommits,
@@ -246,6 +247,54 @@ describe('rebaseInteractive', () => {
         { oid: 'abcdef1234567890', action: 'obliterate' }
       ])
     ).rejects.toThrow(/invalid rebase action/)
+  })
+})
+
+describe('rebaseRange', () => {
+  it('lists base..HEAD oldest-first with short oids and subjects', async () => {
+    const r = repo()
+    const d = r.dir
+    commitFile(d, 'base.txt', 'b\n', 'init')
+    const base = git(d, 'rev-parse', 'HEAD').trim()
+    git(d, 'checkout', '-b', 'feat')
+    const c1 = commitFile(d, 'one.txt', '1\n', 'first subject')
+    const c2 = commitFile(d, 'two.txt', '2\n', 'second subject')
+
+    const range = await rebaseRange(d, base)
+    expect(range.map((c) => c.subject)).toEqual(['first subject', 'second subject'])
+    expect(range.map((c) => c.oid)).toEqual([c1, c2])
+    expect(range[0].shortOid).toBe(c1.slice(0, 7))
+    expect(range.every((c) => c.shortOid.length === 7)).toBe(true)
+  })
+
+  it('returns an empty range when base is HEAD, and replays after rebase', async () => {
+    const r = repo()
+    const d = r.dir
+    commitFile(d, 'a.txt', 'a\n', 'init')
+    git(d, 'checkout', '-b', 'feat')
+    commitFile(d, 'b.txt', 'b\n', 'next')
+    const featHead = git(d, 'rev-parse', 'HEAD').trim()
+
+    // base == HEAD → nothing to replay
+    expect(await rebaseRange(d, featHead)).toEqual([])
+
+    // main advances, feat rebases onto it → feat's own commits remain replayable
+    git(d, 'checkout', 'main')
+    commitFile(d, 'c.txt', 'c\n', 'main work')
+    git(d, 'checkout', 'feat')
+    expect((await rebaseRange(d, 'main')).map((c) => c.subject)).toEqual(['next'])
+
+    git(d, 'rebase', 'main')
+    const rebased = await rebaseRange(d, 'main')
+    expect(rebased.map((c) => c.subject)).toEqual(['next'])
+    // a different oid: the commit was rewritten onto main
+    expect(rebased[0].oid).not.toBe(featHead)
+  })
+
+  it('rejects an invalid base ref', async () => {
+    const r = repo()
+    commitFile(r.dir, 'a.txt', 'a\n', 'init')
+    await expect(rebaseRange(r.dir, 'not a ref')).rejects.toThrow()
   })
 })
 

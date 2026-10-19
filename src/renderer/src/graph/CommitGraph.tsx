@@ -40,6 +40,7 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
   const revert = useApp((s) => s.revert)
   const reset = useApp((s) => s.reset)
   const tagCreate = useApp((s) => s.tagCreate)
+  const openRebaseDialog = useApp((s) => s.openRebaseDialog)
   const setConfirm = useApp((s) => s.setConfirm)
   const setPrompt = useApp((s) => s.setPrompt)
 
@@ -267,6 +268,19 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
               danger: true,
               onConfirm: () => reset('hard', oid)
             })
+        },
+        { separator: true },
+        {
+          label: t('menu.interactiveRebase'),
+          disabled: oid === status?.oid,
+          onClick: () => {
+            const c = commits.find((x) => x.oid === oid)
+            openRebaseDialog({
+              base: oid,
+              baseShort: oid.slice(0, 7),
+              baseSubject: c?.subject ?? ''
+            })
+          }
         },
         { separator: true },
         {

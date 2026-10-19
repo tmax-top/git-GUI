@@ -11,6 +11,7 @@ import type {
   ProgressEventDto,
   RefsDto,
   RebaseOpDto,
+  RebaseRangeCommitDto,
   RepoValidateDto,
   SessionStateDto,
   WorktreeInfoDto
@@ -104,6 +105,7 @@ export interface GitGuiApi {
     autostash?: boolean
     ops: RebaseOpDto[]
   }): Promise<ConflictsDto>
+  gitRebaseRange(args: { repoPath: string; base: string }): Promise<RebaseRangeCommitDto[]>
   gitCherryPick(args: {
     repoPath: string
     oids: string[]
@@ -181,6 +183,7 @@ const api: GitGuiApi = {
   gitOpSkip: (repoPath) => ipcRenderer.invoke(IPC.gitOpSkip, { repoPath }),
   gitRebase: (args) => ipcRenderer.invoke(IPC.gitRebase, args),
   gitRebaseInteractive: (args) => ipcRenderer.invoke(IPC.gitRebaseInteractive, args),
+  gitRebaseRange: (args) => ipcRenderer.invoke(IPC.gitRebaseRange, args),
   gitCherryPick: (args) => ipcRenderer.invoke(IPC.gitCherryPick, args),
   gitRevert: (args) => ipcRenderer.invoke(IPC.gitRevert, args),
   gitReset: (args) => ipcRenderer.invoke(IPC.gitReset, args),

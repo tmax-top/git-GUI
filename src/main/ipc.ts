@@ -26,6 +26,7 @@ import {
   pathsRequestSchema,
   pickDirectorySchema,
   rebaseInteractiveRequestSchema,
+  rebaseRangeRequestSchema,
   rebaseRequestSchema,
   refsRequestSchema,
   resetRequestSchema,
@@ -51,6 +52,7 @@ import type {
   GraphPageDto,
   OpStateDto,
   ProgressEventDto,
+  RebaseRangeCommitDto,
   RefsDto,
   RepoValidateDto,
   WorktreeInfoDto
@@ -89,6 +91,7 @@ import {
   skipOp,
   rebase,
   rebaseInteractive,
+  rebaseRange,
   cherryPick,
   revertCommits,
   reset,
@@ -382,6 +385,10 @@ export function registerIpcHandlers(): void {
     rebaseInteractiveRequestSchema,
     async (arg): Promise<ConflictsDto> =>
       rebaseInteractive(arg.repoPath, arg.upstream, arg.ops, { autostash: arg.autostash })
+  )
+
+  handle(IPC.gitRebaseRange, rebaseRangeRequestSchema, async (arg): Promise<RebaseRangeCommitDto[]> =>
+    rebaseRange(arg.repoPath, arg.base)
   )
 
   handle(IPC.gitCherryPick, cherryPickRequestSchema, async (arg): Promise<ConflictsDto> =>
