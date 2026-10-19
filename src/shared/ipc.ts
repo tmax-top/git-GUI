@@ -233,6 +233,45 @@ export interface WorktreeInfoDto {
   prunable?: boolean
 }
 
+/** i18n key (+ interpolation params) describing one undoable operation. */
+export interface UndoDescriptionDto {
+  key: string
+  params?: Record<string, string | number>
+}
+
+/**
+ * Point-in-time repo snapshot for the undo stack: HEAD + refs + index tree
+ * plus a full worktree tree (tracked+untracked, gitignore-respecting) when
+ * the worktree was dirty at capture time. `fingerprint` detects later drift.
+ */
+export interface UndoSnapshotDto {
+  head: string | null
+  headRef: string | null
+  headTree: string | null
+  refs: Record<string, string>
+  indexTree: string | null
+  worktreeTree: string | null
+  fingerprint: string
+}
+
+export interface UndoStackStateDto {
+  canUndo: boolean
+  canRedo: boolean
+  undoLabel?: UndoDescriptionDto
+  redoLabel?: UndoDescriptionDto
+}
+
+export interface UndoApplyResultDto {
+  applied: boolean
+  /** No entry on the requested side of the stack. */
+  empty?: boolean
+  /** Refs/worktree drifted since the recorded operation. */
+  currentChanged?: boolean
+  /** Branches whose upstream advanced — pushing after undo may need force. */
+  forcePushRisk?: string[]
+  description?: UndoDescriptionDto
+}
+
 // ---------------------------------------------------------------------------
 // Request schemas
 // ---------------------------------------------------------------------------
@@ -433,6 +472,43 @@ export const worktreeAddRequestSchema = z.object({
 export const worktreeRemoveRequestSchema = z.object({
   repoPath: repoPathSchema,
   path: z.string().min(1).max(4096),
+  force: z.boolean().optional()
+})
+
+const undoDescriptionSchema = z.object({
+  key: z.string().min(1).max(128),
+  params: z.record(z.string(), z.union([z.string(), z.number()])).optional()
+})
+
+const undoSnapshotSchema = z.object({
+  head: z.string().nullable(),
+  headRef: z.string().nullable(),
+  headTree: z.string().nullable(),
+  refs: z.record(z.string(), z.string()),
+  indexTree: z.string().nullable(),
+  worktreeTree: z.string().nullable(),
+  fingerprint: z.string()
+})
+
+/** Capture a snapshot of the current repo state (undo primitive). */
+export const undoSnapshotRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  /** Capture worktree content too (false for index-only ops like stage/commit). */
+  worktree: z.boolean().optional()
+})
+
+/** Record a completed mutation onto the undo stack (before/after snapshots). */
+export const undoRecordRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  description: undoDescriptionSchema,
+  before: undoSnapshotSchema,
+  after: undoSnapshotSchema
+})
+
+export const undoApplyRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  direction: z.enum(['undo', 'redo']),
+  /** Proceed despite drift / force-push risk warnings. */
   force: z.boolean().optional()
 })
 

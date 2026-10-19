@@ -26,3 +26,13 @@ export type { BlobResult } from './blob'
 export { addToGitignore } from './ignore'
 export { searchCommits, searchFiles, searchContent } from './search'
 export type { SearchCommitHit, SearchContentHit } from './search'
+export {
+  captureUndoSnapshot,
+  restoreUndoSnapshot,
+  recordUndoEntry,
+  applyUndo,
+  undoList,
+  undoDepth,
+  clearUndoStacks
+} from './undo'
+export type { UndoSnapshot, UndoEntry, UndoStackState, UndoApplyResult, UndoDescription } from './undo'

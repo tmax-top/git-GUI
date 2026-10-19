@@ -42,6 +42,9 @@ import {
   syncRequestSchema,
   tagCreateRequestSchema,
   tagDeleteRequestSchema,
+  undoApplyRequestSchema,
+  undoRecordRequestSchema,
+  undoSnapshotRequestSchema,
   watchRequestSchema,
   worktreeAddRequestSchema,
   worktreeFileSchema,
@@ -60,6 +63,9 @@ import type {
   ConflictFileDto,
   RefsDto,
   RepoValidateDto,
+  UndoApplyResultDto,
+  UndoSnapshotDto,
+  UndoStackStateDto,
   WorktreeInfoDto
 } from '../shared/ipc'
 import {
@@ -113,6 +119,10 @@ import {
   searchCommits,
   searchFiles,
   searchContent,
+  captureUndoSnapshot,
+  recordUndoEntry,
+  applyUndo,
+  undoList,
   listWorktrees,
   addWorktree,
   removeWorktree
@@ -419,6 +429,21 @@ export function registerIpcHandlers(): void {
     if (arg.scope === 'files') return searchFiles(arg.repoPath, arg.query, arg.limit)
     return searchContent(arg.repoPath, arg.query, arg.limit)
   })
+
+  // --- undo / redo stack ----------------------------------------------------
+  handle(IPC.gitUndoSnapshot, undoSnapshotRequestSchema, async (arg): Promise<UndoSnapshotDto> =>
+    captureUndoSnapshot(arg.repoPath, { worktree: arg.worktree })
+  )
+
+  handle(IPC.gitUndoRecord, undoRecordRequestSchema, async (arg): Promise<UndoStackStateDto> =>
+    recordUndoEntry(arg.repoPath, arg.description, arg.before, arg.after)
+  )
+
+  handle(IPC.gitUndoList, opRepoSchema, async (arg): Promise<UndoStackStateDto> => undoList(arg.repoPath))
+
+  handle(IPC.gitUndoApply, undoApplyRequestSchema, async (arg): Promise<UndoApplyResultDto> =>
+    applyUndo(arg.repoPath, arg.direction, arg.force)
+  )
 
   handle(IPC.gitCherryPick, cherryPickRequestSchema, async (arg): Promise<ConflictsDto> =>
     cherryPick(arg.repoPath, arg.oids, { mainline: arg.mainline })

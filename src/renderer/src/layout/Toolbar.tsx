@@ -1,7 +1,14 @@
 import { memo } from 'react'
 import { useApp } from '../store'
-import { t, tf } from '../i18n'
+import { t, tf, type MessageKey } from '../i18n'
 import { btnGhost } from '../components/Modal'
+import type { UndoDescriptionDto } from '@shared/ipc'
+
+/** Render an undo-stack label (i18n key + params) as tooltip text. */
+function describeUndo(d?: UndoDescriptionDto): string {
+  if (!d) return ''
+  return d.params ? tf(d.key as MessageKey, d.params) : t(d.key as MessageKey)
+}
 
 export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const status = useApp((s) => s.status)
@@ -16,6 +23,9 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const updateSettings = useApp((s) => s.updateSettings)
   const closeRepo = useApp((s) => s.closeRepo)
   const openSearch = useApp((s) => s.openSearch)
+  const undoInfo = useApp((s) => s.undoInfo)
+  const undo = useApp((s) => s.undo)
+  const redo = useApp((s) => s.redo)
 
   const disabled = sync !== null
 
@@ -43,6 +53,33 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
       )}
 
       <span className="flex-1" />
+
+      <button
+        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 disabled:opacity-40"
+        disabled={disabled || !undoInfo.canUndo}
+        onClick={() => void undo()}
+        title={
+          undoInfo.undoLabel
+            ? `${t('undo.undo')} — ${describeUndo(undoInfo.undoLabel)}`
+            : t('undo.undo')
+        }
+      >
+        ↩
+      </button>
+      <button
+        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 disabled:opacity-40"
+        disabled={disabled || !undoInfo.canRedo}
+        onClick={() => void redo()}
+        title={
+          undoInfo.redoLabel
+            ? `${t('undo.redo')} — ${describeUndo(undoInfo.redoLabel)}`
+            : t('undo.redo')
+        }
+      >
+        ↪
+      </button>
+
+      <span className="mx-1 h-4 w-px bg-zinc-700" />
 
       <button className={btnGhost()} disabled={disabled} onClick={() => void fetchNow()}>
         {t('toolbar.fetch')}

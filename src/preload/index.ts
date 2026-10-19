@@ -18,6 +18,10 @@ import type {
   SearchContentHitDto,
   SearchScope,
   SessionStateDto,
+  UndoApplyResultDto,
+  UndoDescriptionDto,
+  UndoSnapshotDto,
+  UndoStackStateDto,
   WorktreeInfoDto
 } from '../shared/ipc'
 // NOTE: sandboxed preload cannot require external modules (e.g. zod) — channel
@@ -142,6 +146,19 @@ export interface GitGuiApi {
     path: string
     side: 'ours' | 'theirs'
   }): Promise<void>
+  gitUndoSnapshot(args: { repoPath: string; worktree?: boolean }): Promise<UndoSnapshotDto>
+  gitUndoRecord(args: {
+    repoPath: string
+    description: UndoDescriptionDto
+    before: UndoSnapshotDto
+    after: UndoSnapshotDto
+  }): Promise<UndoStackStateDto>
+  gitUndoList(repoPath: string): Promise<UndoStackStateDto>
+  gitUndoApply(args: {
+    repoPath: string
+    direction: 'undo' | 'redo'
+    force?: boolean
+  }): Promise<UndoApplyResultDto>
   worktreeList(repoPath: string): Promise<WorktreeInfoDto[]>
   worktreeAdd(args: {
     repoPath: string
@@ -215,6 +232,10 @@ const api: GitGuiApi = {
   gitSearch: (args) => ipcRenderer.invoke(IPC.gitSearch, args),
   gitConflictResolve: (args) => ipcRenderer.invoke(IPC.gitConflictResolve, args),
   gitConflictAccept: (args) => ipcRenderer.invoke(IPC.gitConflictAccept, args),
+  gitUndoSnapshot: (args) => ipcRenderer.invoke(IPC.gitUndoSnapshot, args),
+  gitUndoRecord: (args) => ipcRenderer.invoke(IPC.gitUndoRecord, args),
+  gitUndoList: (repoPath) => ipcRenderer.invoke(IPC.gitUndoList, { repoPath }),
+  gitUndoApply: (args) => ipcRenderer.invoke(IPC.gitUndoApply, args),
   worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),
   worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
   worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),

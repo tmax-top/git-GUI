@@ -49,6 +49,24 @@ export default function App(): React.JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Undo/redo: Cmd/Ctrl+Z and Cmd/Ctrl+Shift+Z (skipped while typing in a field).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (!(e.metaKey || e.ctrlKey)) return
+      if (e.key.toLowerCase() !== 'z') return
+      const st = useApp.getState()
+      if (st.view !== 'repo' || !st.repoPath) return
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+      e.preventDefault()
+      if (e.shiftKey) void st.redo()
+      else void st.undo()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   if (!booted) {
     return (
       <div className="theme-white">

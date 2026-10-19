@@ -10,10 +10,13 @@ import type {
   ProgressEventDto,
   RebaseOpDto,
   RefsDto,
-  StatusFileDto
+  StatusFileDto,
+  UndoApplyResultDto,
+  UndoSnapshotDto,
+  UndoStackStateDto
 } from '@shared/ipc'
 import { isUntracked, stagedFiles, untrackedFiles } from '@shared/status'
-import { setLocale, t, type Locale } from './i18n'
+import { setLocale, t, tf, type Locale, type MessageKey } from './i18n'
 import type { ContextMenuEntry } from './components/ContextMenu'
 
 export type Selection =
@@ -61,6 +64,14 @@ export interface RebaseDialogState {
   baseSubject: string
 }
 
+/** Undo-bookkeeping options for one mutating action. */
+interface UndoOp {
+  desc: MessageKey
+  params?: Record<string, string | number>
+  /** Capture/restore worktree content too (checkout/merge/rebase/reset --hard/stash/pull). */
+  worktree?: boolean
+}
+
 interface AppState {
   booted: boolean
   view: 'start' | 'repo'
@@ -88,6 +99,8 @@ interface AppState {
   rebaseDialog: RebaseDialogState | null
   /** Global search dialog visibility (commit / file path / content scopes). */
   searchOpen: boolean
+  /** Undo/redo stack state for the open repo (owned by the main process). */
+  undoInfo: UndoStackStateDto
 
   boot(): Promise<void>
   openRepo(path: string): Promise<boolean>
@@ -128,6 +141,9 @@ interface AppState {
   closeRebaseDialog(): void
   openSearch(): void
   closeSearch(): void
+  refreshUndo(): Promise<void>
+  undo(): Promise<void>
+  redo(): Promise<void>
   cherryPick(oids: string[], mainline?: number): Promise<void>
   revert(oids: string[], mainline?: number): Promise<void>
   reset(mode: 'soft' | 'mixed' | 'hard', target: string): Promise<void>
@@ -165,15 +181,62 @@ function opId(): string {
   return globalThis.crypto.randomUUID()
 }
 
+/** Human-readable risk explanation for a refused undo/redo. */
+function undoRiskBody(res: UndoApplyResultDto): string {
+  const parts: string[] = []
+  if (res.currentChanged) parts.push(t('undo.riskChanged'))
+  if (res.forcePushRisk?.length) {
+    parts.push(tf('undo.riskForcePush', { branches: res.forcePushRisk.join(', ') }))
+  }
+  return parts.join('\n') || t('undo.riskGeneric')
+}
+
 let eventSubscribed = false
 
 export const useApp = create<AppState>((set, get) => {
-  async function runMutate(fn: () => Promise<void>): Promise<void> {
+  /** Snapshot the repo for the undo stack. Best-effort: null on failure. */
+  async function captureUndo(worktree: boolean): Promise<UndoSnapshotDto | null> {
+    const repoPath = get().repoPath
+    if (!repoPath) return null
+    try {
+      return await window.api.gitUndoSnapshot({ repoPath, worktree })
+    } catch {
+      return null
+    }
+  }
+
+  /** Record a finished op onto the stack and publish the new stack state. */
+  async function recordUndo(
+    undo: UndoOp,
+    before: UndoSnapshotDto | null,
+    worktree: boolean
+  ): Promise<void> {
+    const repoPath = get().repoPath
+    if (!repoPath || !before) return
+    try {
+      const after = await window.api.gitUndoSnapshot({ repoPath, worktree })
+      const state = await window.api.gitUndoRecord({
+        repoPath,
+        description: { key: undo.desc, params: undo.params },
+        before,
+        after
+      })
+      set({ undoInfo: state })
+    } catch {
+      /* undo bookkeeping must never break the op itself */
+    }
+  }
+
+  async function runMutate(fn: () => Promise<void>, undo?: UndoOp): Promise<void> {
+    const worktree = undo?.worktree ?? false
+    const before = undo ? await captureUndo(worktree) : null
     try {
       await fn()
     } catch (e) {
       set({ error: errText(e) })
+      return
     }
+    if (undo) await recordUndo(undo, before, worktree)
   }
 
   async function loadDiffFor(sel: Selection, repoPath: string): Promise<void> {
@@ -236,14 +299,23 @@ export const useApp = create<AppState>((set, get) => {
   }
 
   /** Run a history mutation that may stop on conflicts, then resync everything. */
-  async function runHistoryOp(fn: () => Promise<ConflictsDto | void>): Promise<void> {
+  async function runHistoryOp(
+    fn: () => Promise<ConflictsDto | void>,
+    undo?: UndoOp
+  ): Promise<void> {
     const repoPath = get().repoPath
     if (!repoPath) return
+    const worktree = undo?.worktree ?? false
+    const before = undo ? await captureUndo(worktree) : null
+    let conflicted = false
     try {
-      await fn()
+      const res = await fn()
+      conflicted = !!(res && 'conflicts' in res && res.conflicts.length > 0)
     } catch (e) {
       set({ error: errText(e) })
     }
+    // A conflicted op is mid-flight (opAbort recovers) — don't stack it.
+    if (undo && !conflicted) await recordUndo(undo, before, worktree)
     await get().refreshAll()
   }
 
@@ -271,6 +343,7 @@ export const useApp = create<AppState>((set, get) => {
     prompt: null,
     rebaseDialog: null,
     searchOpen: false,
+    undoInfo: { canUndo: false, canRedo: false },
     settings: {
       favorites: [],
       recent: [],
@@ -352,13 +425,15 @@ export const useApp = create<AppState>((set, get) => {
           menu: null,
           prompt: null,
           rebaseDialog: null,
-          searchOpen: false
+          searchOpen: false,
+          undoInfo: { canUndo: false, canRedo: false }
         })
         await window.api.watchStart(path)
         void window.api.sessionSet({ openRepos: [path], activeRepo: path })
         const recents = [path, ...get().settings.recent.filter((p) => p !== path)].slice(0, 20)
         void get().updateSettings({ recent: recents })
         await get().refreshAll()
+        await get().refreshUndo()
         return true
       } catch (e) {
         set({ error: errText(e) })
@@ -385,7 +460,8 @@ export const useApp = create<AppState>((set, get) => {
         menu: null,
         prompt: null,
         rebaseDialog: null,
-        searchOpen: false
+        searchOpen: false,
+        undoInfo: { canUndo: false, canRedo: false }
       })
       void window.api.sessionSet({ activeRepo: null })
     },
@@ -466,29 +542,35 @@ export const useApp = create<AppState>((set, get) => {
     async stage(paths: string[]): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runMutate(async () => {
-        await window.api.gitStage({ repoPath, paths })
-        await get().refreshStatus()
-        const sel = get().selection
-        if (sel.kind === 'file') {
-          const still = get().status?.files.find((f) => f.path === sel.path)
-          if (!still) get().selectWip()
-        }
-      })
+      await runMutate(
+        async () => {
+          await window.api.gitStage({ repoPath, paths })
+          await get().refreshStatus()
+          const sel = get().selection
+          if (sel.kind === 'file') {
+            const still = get().status?.files.find((f) => f.path === sel.path)
+            if (!still) get().selectWip()
+          }
+        },
+        { desc: 'undo.desc.stage' }
+      )
     },
 
     async unstage(paths: string[]): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runMutate(async () => {
-        await window.api.gitUnstage({ repoPath, paths })
-        await get().refreshStatus()
-        const sel = get().selection
-        if (sel.kind === 'file') {
-          const still = get().status?.files.find((f) => f.path === sel.path)
-          if (!still) get().selectWip()
-        }
-      })
+      await runMutate(
+        async () => {
+          await window.api.gitUnstage({ repoPath, paths })
+          await get().refreshStatus()
+          const sel = get().selection
+          if (sel.kind === 'file') {
+            const still = get().status?.files.find((f) => f.path === sel.path)
+            if (!still) get().selectWip()
+          }
+        },
+        { desc: 'undo.desc.unstage' }
+      )
     },
 
     async discard(path: string): Promise<void> {
@@ -521,15 +603,18 @@ export const useApp = create<AppState>((set, get) => {
     async stageHunk(file: DiffFile, hunkIndex: number): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runMutate(async () => {
-        const sel = get().selection
-        if (sel.kind !== 'file') return
-        const patch = buildHunkPatch(file, hunkIndex)
-        if (!patch) return
-        await window.api.gitApplyHunk({ repoPath, patch, reverse: sel.cached || undefined })
-        await get().refreshStatus()
-        void loadDiffFor(sel, repoPath)
-      })
+      await runMutate(
+        async () => {
+          const sel = get().selection
+          if (sel.kind !== 'file') return
+          const patch = buildHunkPatch(file, hunkIndex)
+          if (!patch) return
+          await window.api.gitApplyHunk({ repoPath, patch, reverse: sel.cached || undefined })
+          await get().refreshStatus()
+          void loadDiffFor(sel, repoPath)
+        },
+        { desc: 'undo.desc.hunk' }
+      )
     },
 
     async resolveConflict(content): Promise<void> {
@@ -564,8 +649,10 @@ export const useApp = create<AppState>((set, get) => {
     async doCommit(message, amend): Promise<boolean> {
       const repoPath = get().repoPath
       if (!repoPath) return false
+      const before = await captureUndo(false)
       try {
         await window.api.gitCommit({ repoPath, message, amend })
+        await recordUndo({ desc: amend ? 'undo.desc.amend' : 'undo.desc.commit' }, before, false)
         await get().refreshAll()
         get().selectWip()
         return true
@@ -578,11 +665,14 @@ export const useApp = create<AppState>((set, get) => {
     async checkout(target): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runMutate(async () => {
-        await window.api.gitCheckout({ repoPath, target })
-        await get().refreshAll()
-        get().selectWip()
-      })
+      await runMutate(
+        async () => {
+          await window.api.gitCheckout({ repoPath, target })
+          await get().refreshAll()
+          get().selectWip()
+        },
+        { desc: 'undo.desc.checkout', params: { target }, worktree: true }
+      )
     },
 
     async fetch(): Promise<void> {
@@ -605,9 +695,11 @@ export const useApp = create<AppState>((set, get) => {
       const repoPath = get().repoPath
       if (!repoPath) return
       const id = opId()
+      const before = await captureUndo(true)
       set({ sync: { opId: id, kind: 'pull' }, error: null })
       try {
         await window.api.gitPull({ repoPath, opId: id, rebase })
+        await recordUndo({ desc: 'undo.desc.pull' }, before, true)
         await get().refreshAll()
       } catch (e) {
         const msg = errText(e)
@@ -654,20 +746,30 @@ export const useApp = create<AppState>((set, get) => {
     async merge(branch, opts): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitMerge({ repoPath, branch, ...opts }))
+      await runHistoryOp(
+        () => window.api.gitMerge({ repoPath, branch, ...opts }),
+        { desc: 'undo.desc.merge', params: { branch }, worktree: true }
+      )
     },
 
     async rebase(upstream, opts): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitRebase({ repoPath, upstream, ...opts }))
+      await runHistoryOp(
+        () => window.api.gitRebase({ repoPath, upstream, ...opts }),
+        { desc: 'undo.desc.rebase', params: { upstream }, worktree: true }
+      )
     },
 
     async rebaseInteractive(upstream, ops): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
+      const before = await captureUndo(true)
       try {
-        await window.api.gitRebaseInteractive({ repoPath, upstream, ops })
+        const res = await window.api.gitRebaseInteractive({ repoPath, upstream, ops })
+        if (res.conflicts.length === 0) {
+          await recordUndo({ desc: 'undo.desc.rebaseInteractive' }, before, true)
+        }
       } catch (e) {
         set({ error: errText(e) })
         await get().refreshAll()
@@ -692,22 +794,103 @@ export const useApp = create<AppState>((set, get) => {
       set({ searchOpen: false })
     },
 
+    async refreshUndo(): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      try {
+        set({ undoInfo: await window.api.gitUndoList(repoPath) })
+      } catch {
+        set({ undoInfo: { canUndo: false, canRedo: false } })
+      }
+    },
+
+    async undo(): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      try {
+        const res = await window.api.gitUndoApply({ repoPath, direction: 'undo' })
+        if (res.applied) {
+          set({ undoInfo: await window.api.gitUndoList(repoPath) })
+          await get().refreshAll()
+          return
+        }
+        if (res.empty) return
+        const body = undoRiskBody(res)
+        set({
+          confirm: {
+            title: t('undo.riskTitle'),
+            body,
+            confirmLabel: t('undo.forceConfirm'),
+            onConfirm: async () => {
+              const forced = await window.api.gitUndoApply({ repoPath, direction: 'undo', force: true })
+              if (forced.applied) {
+                set({ undoInfo: await window.api.gitUndoList(repoPath) })
+                await get().refreshAll()
+              }
+            }
+          }
+        })
+      } catch (e) {
+        set({ error: errText(e) })
+      }
+    },
+
+    async redo(): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      try {
+        const res = await window.api.gitUndoApply({ repoPath, direction: 'redo' })
+        if (res.applied) {
+          set({ undoInfo: await window.api.gitUndoList(repoPath) })
+          await get().refreshAll()
+          return
+        }
+        if (res.empty) return
+        const body = undoRiskBody(res)
+        set({
+          confirm: {
+            title: t('undo.riskTitle'),
+            body,
+            confirmLabel: t('undo.forceConfirm'),
+            onConfirm: async () => {
+              const forced = await window.api.gitUndoApply({ repoPath, direction: 'redo', force: true })
+              if (forced.applied) {
+                set({ undoInfo: await window.api.gitUndoList(repoPath) })
+                await get().refreshAll()
+              }
+            }
+          }
+        })
+      } catch (e) {
+        set({ error: errText(e) })
+      }
+    },
+
     async cherryPick(oids, mainline): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitCherryPick({ repoPath, oids, mainline }))
+      await runHistoryOp(
+        () => window.api.gitCherryPick({ repoPath, oids, mainline }),
+        { desc: 'undo.desc.cherryPick', params: { n: oids.length }, worktree: true }
+      )
     },
 
     async revert(oids, mainline): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitRevert({ repoPath, oids, mainline }))
+      await runHistoryOp(
+        () => window.api.gitRevert({ repoPath, oids, mainline }),
+        { desc: 'undo.desc.revert', params: { n: oids.length }, worktree: true }
+      )
     },
 
     async reset(mode, target): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitReset({ repoPath, mode, target }))
+      await runHistoryOp(
+        () => window.api.gitReset({ repoPath, mode, target }),
+        { desc: 'undo.desc.reset', params: { mode }, worktree: mode === 'hard' }
+      )
     },
 
     async opContinue(): Promise<void> {
@@ -731,43 +914,64 @@ export const useApp = create<AppState>((set, get) => {
     async stashPush(opts): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitStashPush({ repoPath, ...opts }))
+      await runHistoryOp(
+        () => window.api.gitStashPush({ repoPath, ...opts }),
+        { desc: 'undo.desc.stashPush', worktree: true }
+      )
     },
 
     async stashApply(ref, pop): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitStashApply({ repoPath, ref, pop }))
+      await runHistoryOp(
+        () => window.api.gitStashApply({ repoPath, ref, pop }),
+        { desc: pop ? 'undo.desc.stashPop' : 'undo.desc.stashApply', worktree: true }
+      )
     },
 
     async stashDrop(ref): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitStashDrop({ repoPath, ref }))
+      await runHistoryOp(
+        () => window.api.gitStashDrop({ repoPath, ref }),
+        { desc: 'undo.desc.stashDrop' }
+      )
     },
 
     async tagCreate(name, message, oid): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitTagCreate({ repoPath, name, message, oid }))
+      await runHistoryOp(
+        () => window.api.gitTagCreate({ repoPath, name, message, oid }),
+        { desc: 'undo.desc.tagCreate', params: { name } }
+      )
     },
 
     async tagDelete(names): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitTagDelete({ repoPath, names }))
+      await runHistoryOp(
+        () => window.api.gitTagDelete({ repoPath, names }),
+        { desc: 'undo.desc.tagDelete', params: { n: names.length } }
+      )
     },
 
     async branchDelete(name, force): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitBranchDelete({ repoPath, name, force }))
+      await runHistoryOp(
+        () => window.api.gitBranchDelete({ repoPath, name, force }),
+        { desc: 'undo.desc.branchDelete', params: { name } }
+      )
     },
 
     async branchRename(from, to): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
-      await runHistoryOp(() => window.api.gitBranchRename({ repoPath, from, to }))
+      await runHistoryOp(
+        () => window.api.gitBranchRename({ repoPath, from, to }),
+        { desc: 'undo.desc.branchRename', params: { from, to } }
+      )
     },
 
     setConfirm(state): void {
