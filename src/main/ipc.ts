@@ -27,6 +27,9 @@ import {
   pickDirectorySchema,
   rebaseInteractiveRequestSchema,
   rebaseRangeRequestSchema,
+  conflictFileRequestSchema,
+  conflictResolveRequestSchema,
+  conflictSideRequestSchema,
   rebaseRequestSchema,
   refsRequestSchema,
   resetRequestSchema,
@@ -53,6 +56,7 @@ import type {
   OpStateDto,
   ProgressEventDto,
   RebaseRangeCommitDto,
+  ConflictFileDto,
   RefsDto,
   RepoValidateDto,
   WorktreeInfoDto
@@ -102,6 +106,9 @@ import {
   tagDelete,
   deleteBranch,
   renameBranch,
+  getConflictFile,
+  resolveConflict,
+  acceptConflictSide,
   listWorktrees,
   addWorktree,
   removeWorktree
@@ -390,6 +397,18 @@ export function registerIpcHandlers(): void {
   handle(IPC.gitRebaseRange, rebaseRangeRequestSchema, async (arg): Promise<RebaseRangeCommitDto[]> =>
     rebaseRange(arg.repoPath, arg.base)
   )
+
+  handle(IPC.gitConflictRead, conflictFileRequestSchema, async (arg): Promise<ConflictFileDto> =>
+    getConflictFile(arg.repoPath, arg.path)
+  )
+
+  handle(IPC.gitConflictResolve, conflictResolveRequestSchema, async (arg) => {
+    await resolveConflict(arg.repoPath, arg.path, arg.content)
+  })
+
+  handle(IPC.gitConflictAccept, conflictSideRequestSchema, async (arg) => {
+    await acceptConflictSide(arg.repoPath, arg.path, arg.side)
+  })
 
   handle(IPC.gitCherryPick, cherryPickRequestSchema, async (arg): Promise<ConflictsDto> =>
     cherryPick(arg.repoPath, arg.oids, { mainline: arg.mainline })

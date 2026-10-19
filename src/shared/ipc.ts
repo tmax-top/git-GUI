@@ -126,6 +126,37 @@ export interface BlobDto {
   size: number
 }
 
+/** Three index stages of a conflicted file + worktree content for the editor. */
+export interface ConflictFileDto {
+  path: string
+  /** Stage 1 — common ancestor. Null for add/add or delete/modify conflicts. */
+  base: string | null
+  /** Stage 2 — ours (current branch / HEAD). Null when our side deleted. */
+  ours: string | null
+  /** Stage 3 — theirs (incoming). Null when their side deleted. */
+  theirs: string | null
+  /** Worktree content (contains conflict markers) — what the user edits. */
+  worktree: string
+  binary: boolean
+}
+
+export const conflictFileRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  path: z.string().min(1).max(4096)
+})
+
+export const conflictResolveRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  path: z.string().min(1).max(4096),
+  content: z.string().max(10_000_000)
+})
+
+export const conflictSideRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  path: z.string().min(1).max(4096),
+  side: z.enum(['ours', 'theirs'])
+})
+
 export interface RepoValidateDto {
   path: string
   isRepo: boolean

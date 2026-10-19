@@ -4,6 +4,7 @@ import type {
   AppSettingsDto,
   BlobDto,
   ConflictsDto,
+  ConflictFileDto,
   GitStatusDto,
   GraphPageDto,
   Language,
@@ -125,6 +126,13 @@ export interface GitGuiApi {
   gitTagDelete(args: { repoPath: string; names: string[] }): Promise<void>
   gitBranchDelete(args: { repoPath: string; name: string; force?: boolean }): Promise<void>
   gitBranchRename(args: { repoPath: string; from: string; to: string }): Promise<void>
+  gitConflictRead(args: { repoPath: string; path: string }): Promise<ConflictFileDto>
+  gitConflictResolve(args: { repoPath: string; path: string; content: string }): Promise<void>
+  gitConflictAccept(args: {
+    repoPath: string
+    path: string
+    side: 'ours' | 'theirs'
+  }): Promise<void>
   worktreeList(repoPath: string): Promise<WorktreeInfoDto[]>
   worktreeAdd(args: {
     repoPath: string
@@ -194,6 +202,9 @@ const api: GitGuiApi = {
   gitTagDelete: (args) => ipcRenderer.invoke(IPC.gitTagDelete, args),
   gitBranchDelete: (args) => ipcRenderer.invoke(IPC.gitBranchDelete, args),
   gitBranchRename: (args) => ipcRenderer.invoke(IPC.gitBranchRename, args),
+  gitConflictRead: (args) => ipcRenderer.invoke(IPC.gitConflictRead, args),
+  gitConflictResolve: (args) => ipcRenderer.invoke(IPC.gitConflictResolve, args),
+  gitConflictAccept: (args) => ipcRenderer.invoke(IPC.gitConflictAccept, args),
   worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),
   worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
   worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),

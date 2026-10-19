@@ -50,6 +50,9 @@ export const IPC = {
   gitTagDelete: 'git:tagDelete',
   gitBranchDelete: 'git:branchDelete',
   gitBranchRename: 'git:branchRename',
+  gitConflictRead: 'git:conflictRead',
+  gitConflictResolve: 'git:conflictResolve',
+  gitConflictAccept: 'git:conflictAccept',
   worktreeList: 'worktree:list',
   worktreeAdd: 'worktree:add',
   worktreeRemove: 'worktree:remove'

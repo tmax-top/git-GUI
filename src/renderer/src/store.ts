@@ -3,6 +3,7 @@ import { buildHunkPatch, parseUnifiedDiff, type DiffFile } from '@shared/diff'
 import type {
   AppSettingsDto,
   CommitDto,
+  ConflictFileDto,
   ConflictsDto,
   GitStatusDto,
   OpStateDto,
@@ -73,6 +74,9 @@ interface AppState {
   diff: string
   diffFiles: DiffFile[]
   diffLoading: boolean
+  /** Conflicted file staged content for the three-way editor (null when none). */
+  conflict: ConflictFileDto | null
+  conflictLoading: boolean
   sync: SyncState | null
   error: string | null
   confirm: ConfirmState | null
@@ -95,6 +99,10 @@ interface AppState {
   selectWip(): void
   selectCommit(oid: string): void
   selectFile(path: string, cached: boolean, untracked: boolean): void
+  /** Write the edited resolution over the conflicted worktree file + stage it. */
+  resolveConflict(content: string): Promise<void>
+  /** Accept one side wholesale (binary conflicts, or "take ours/theirs"). */
+  acceptConflict(side: 'ours' | 'theirs'): Promise<void>
 
   stage(paths: string[]): Promise<void>
   unstage(paths: string[]): Promise<void>
@@ -165,7 +173,7 @@ export const useApp = create<AppState>((set, get) => {
   }
 
   async function loadDiffFor(sel: Selection, repoPath: string): Promise<void> {
-    set({ diffLoading: true, diff: '', diffFiles: [] })
+    set({ diffLoading: true, diff: '', diffFiles: [], conflict: null, conflictLoading: false })
     try {
       let text = ''
       if (sel.kind === 'commit') {
@@ -177,6 +185,18 @@ export const useApp = create<AppState>((set, get) => {
           cached: sel.cached || undefined,
           untracked: sel.untracked || undefined
         })
+        // A conflicted file gets the three-way editor alongside its diff.
+        const isUnmerged = get().status?.files.find((f) => f.path === sel.path)?.unmerged === true
+        if (isUnmerged) {
+          set({ conflictLoading: true })
+          try {
+            const conflict = await window.api.gitConflictRead({ repoPath, path: sel.path })
+            set({ conflict, conflictLoading: false })
+          } catch (ce) {
+            set({ conflict: null, conflictLoading: false })
+            set({ error: errText(ce) })
+          }
+        }
       }
       set({ diff: text, diffFiles: parseUnifiedDiff(text), diffLoading: false })
     } catch (e) {
@@ -236,6 +256,8 @@ export const useApp = create<AppState>((set, get) => {
     diff: '',
     diffFiles: [],
     diffLoading: false,
+    conflict: null,
+    conflictLoading: false,
     sync: null,
     error: null,
     confirm: null,
@@ -318,6 +340,8 @@ export const useApp = create<AppState>((set, get) => {
           selection: { kind: 'wip' },
           diff: '',
           diffFiles: [],
+          conflict: null,
+          conflictLoading: false,
           error: null,
           opState: null,
           menu: null,
@@ -348,6 +372,8 @@ export const useApp = create<AppState>((set, get) => {
         selection: { kind: 'wip' },
         diff: '',
         diffFiles: [],
+        conflict: null,
+        conflictLoading: false,
         sync: null,
         opState: null,
         menu: null,
@@ -414,7 +440,7 @@ export const useApp = create<AppState>((set, get) => {
 
     selectWip(): void {
       const repoPath = get().repoPath
-      set({ selection: { kind: 'wip' }, diff: '', diffFiles: [] })
+      set({ selection: { kind: 'wip' }, diff: '', diffFiles: [], conflict: null, conflictLoading: false })
       if (repoPath) void get().refreshStatus()
     },
 
@@ -496,6 +522,30 @@ export const useApp = create<AppState>((set, get) => {
         await window.api.gitApplyHunk({ repoPath, patch, reverse: sel.cached || undefined })
         await get().refreshStatus()
         void loadDiffFor(sel, repoPath)
+      })
+    },
+
+    async resolveConflict(content): Promise<void> {
+      const repoPath = get().repoPath
+      const conflict = get().conflict
+      if (!repoPath || !conflict) return
+      await runMutate(async () => {
+        await window.api.gitConflictResolve({ repoPath, path: conflict.path, content })
+        set({ conflict: null })
+        await get().refreshStatus()
+        void loadDiffFor({ kind: 'file', path: conflict.path, cached: true, untracked: false }, repoPath)
+      })
+    },
+
+    async acceptConflict(side): Promise<void> {
+      const repoPath = get().repoPath
+      const conflict = get().conflict
+      if (!repoPath || !conflict) return
+      await runMutate(async () => {
+        await window.api.gitConflictAccept({ repoPath, path: conflict.path, side })
+        set({ conflict: null })
+        await get().refreshStatus()
+        void loadDiffFor({ kind: 'file', path: conflict.path, cached: true, untracked: false }, repoPath)
       })
     },
 

@@ -18,6 +18,8 @@ export {
 export type { DiffFile, DiffHunk, DiffLine, DiffOptions } from './diff'
 export * from './ops'
 export * from './advanced'
+export { getConflictFile, resolveConflict, acceptConflictSide } from './conflict'
+export type { ConflictFile } from './conflict'
 export { applyPatchToIndex } from './applyHunk'
 export { getFileBlob, isImagePath } from './blob'
 export type { BlobResult } from './blob'

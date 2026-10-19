@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { isImagePath } from './imagePath'
 import { DiffView, ImageView, EmptyDiff } from '../diff/DiffView'
+import { ConflictEditor } from './ConflictEditor'
 import { currentCommit, useApp } from '../store'
 import { t } from '../i18n'
 import { fullDate } from '../utils/format'
@@ -17,6 +18,7 @@ export const DiffPanel = memo(function DiffPanel(): React.JSX.Element {
   const diffLoading = useApp((s) => s.diffLoading)
   const commits = useApp((s) => s.commits)
   const stageHunk = useApp((s) => s.stageHunk)
+  const conflict = useApp((s) => s.conflict)
 
   if (!repoPath) return <div className="p-4 text-sm text-zinc-600">{t('diff.empty')}</div>
 
@@ -45,6 +47,7 @@ export const DiffPanel = memo(function DiffPanel(): React.JSX.Element {
     const imageFile = diffFiles.some(isImageFile) || isImagePath(selection.path)
     const source: 'index' | 'worktree' =
       selection.cached && !selection.untracked ? 'index' : 'worktree'
+    const isConflict = conflict !== null && conflict.path === selection.path
     return (
       <div className="flex h-full min-h-0 flex-col">
         <div className="shrink-0 border-b border-zinc-800 bg-zinc-900/60 px-3 py-1.5 font-mono text-xs text-zinc-300">
@@ -52,6 +55,11 @@ export const DiffPanel = memo(function DiffPanel(): React.JSX.Element {
           <span className="ml-2 text-zinc-600">
             {selection.cached ? t('panel.staged') : t('panel.changes')}
           </span>
+          {isConflict && (
+            <span className="ml-2 rounded bg-amber-700/70 px-1.5 py-0.5 text-[10px] text-amber-100">
+              {t('conflict.title')}
+            </span>
+          )}
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
           {imageFile && (diffFiles.length === 0 || diffFiles.every((f) => f.binary)) ? (
@@ -65,6 +73,7 @@ export const DiffPanel = memo(function DiffPanel(): React.JSX.Element {
             />
           )}
         </div>
+        {isConflict && <ConflictEditor />}
       </div>
     )
   }
