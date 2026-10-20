@@ -108,11 +108,26 @@ export interface AppSettingsDto {
   graphDateWidth: number
   /** OID column width in the commit graph, px. */
   graphOidWidth: number
+  /** Background auto-fetch period in minutes; 0 = disabled. 0–60. */
+  autoFetchInterval: number
+  /** Auto-fetch passes `--prune` to drop stale remote-tracking refs. */
+  autoPrune: boolean
 }
 
 export interface SessionStateDto {
   openRepos: string[]
   activeRepo: string | null
+}
+
+/** One entry in the cross-session activity log (auto-fetch, sync ops, …). */
+export interface ActivityEntryDto {
+  id: string
+  /** Epoch ms. */
+  ts: number
+  kind: 'auto-fetch' | 'fetch' | 'pull' | 'push'
+  repoPath: string
+  ok: boolean
+  message?: string
 }
 
 export interface GraphPageDto {
@@ -533,8 +548,13 @@ export const settingsPatchSchema = z.object({
   graphSplitPct: z.number().min(15).max(85).optional(),
   graphAuthorWidth: z.number().int().min(60).max(400).optional(),
   graphDateWidth: z.number().int().min(40).max(200).optional(),
-  graphOidWidth: z.number().int().min(40).max(160).optional()
+  graphOidWidth: z.number().int().min(40).max(160).optional(),
+  autoFetchInterval: z.number().int().min(0).max(60).optional(),
+  autoPrune: z.boolean().optional()
 })
+
+/** Read back recent activity-log entries (newest first). */
+export const activityListRequestSchema = z.object({ limit: z.number().int().min(1).max(500).optional() })
 
 export const sessionPatchSchema = z.object({
   openRepos: z.array(repoPathSchema).max(50).optional(),

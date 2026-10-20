@@ -150,12 +150,16 @@ export async function checkout(repoPath: string, target: string): Promise<void> 
 export interface SyncOptions {
   onProgress?: (e: ProgressEvent) => void
   signal?: AbortSignal
+  /** Pass `--prune` (default true) to drop stale remote-tracking refs. */
+  prune?: boolean
 }
 
 export async function fetch(repoPath: string, opts: SyncOptions = {}): Promise<void> {
+  const args = ['fetch', '--progress', '--all']
+  if (opts.prune !== false) args.push('--prune')
   const result = await execGit({
     cwd: repoPath,
-    args: ['fetch', '--progress', '--all', '--prune'],
+    args,
     signal: opts.signal,
     onStderr: opts.onProgress
       ? (chunk): void => {

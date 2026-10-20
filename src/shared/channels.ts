@@ -58,6 +58,7 @@ export const IPC = {
   gitUndoRecord: 'git:undoRecord',
   gitUndoList: 'git:undoList',
   gitUndoApply: 'git:undoApply',
+  activityList: 'activity:list',
   worktreeList: 'worktree:list',
   worktreeAdd: 'worktree:add',
   worktreeRemove: 'worktree:remove'
@@ -65,5 +66,6 @@ export const IPC = {
 
 export const IPC_EVENTS = {
   repoChanged: 'repo:changed',
-  gitProgress: 'git:progress'
+  gitProgress: 'git:progress',
+  activityNew: 'activity:new'
 } as const

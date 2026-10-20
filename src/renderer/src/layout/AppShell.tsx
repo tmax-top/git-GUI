@@ -7,6 +7,7 @@ import { OpBanner } from './OpBanner'
 import { PromptModal } from './PromptModal'
 import { RebaseDialog } from './RebaseDialog'
 import { SearchDialog } from './SearchDialog'
+import { SettingsDialog } from './SettingsDialog'
 import { CommitGraph } from '../graph/CommitGraph'
 import { CommitPanel } from '../panel/CommitPanel'
 import { DiffPanel } from '../panel/DiffPanel'
@@ -103,6 +104,7 @@ function GlobalMenu(): React.JSX.Element | null {
 }
 
 export function AppShell(): React.JSX.Element {
+  const settingsOpen = useApp((s) => s.settingsOpen)
   const left = useResizableSetting('leftPanelWidth', 224, 160, 600)
   const right = useResizableSetting('rightPanelWidth', 320, 220, 700)
   const split = useResizableSetting('graphSplitPct', 55, 15, 85)
@@ -146,6 +148,7 @@ export function AppShell(): React.JSX.Element {
       <PromptModal />
       <RebaseDialog />
       <SearchDialog />
+      {settingsOpen && <SettingsDialog />}
       <GlobalMenu />
     </div>
   )

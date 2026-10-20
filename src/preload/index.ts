@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type {
+  ActivityEntryDto,
   AppInfoDto,
   AppSettingsDto,
   BlobDto,
@@ -159,6 +160,7 @@ export interface GitGuiApi {
     direction: 'undo' | 'redo'
     force?: boolean
   }): Promise<UndoApplyResultDto>
+  activityList(limit?: number): Promise<ActivityEntryDto[]>
   worktreeList(repoPath: string): Promise<WorktreeInfoDto[]>
   worktreeAdd(args: {
     repoPath: string
@@ -173,6 +175,7 @@ export interface GitGuiApi {
 
   onRepoChanged(cb: (repoPath: string) => void): Unsub
   onGitProgress(cb: (payload: { opId: string; event: ProgressEventDto }) => void): Unsub
+  onActivity(cb: (entry: ActivityEntryDto) => void): Unsub
 }
 
 const api: GitGuiApi = {
@@ -236,6 +239,7 @@ const api: GitGuiApi = {
   gitUndoRecord: (args) => ipcRenderer.invoke(IPC.gitUndoRecord, args),
   gitUndoList: (repoPath) => ipcRenderer.invoke(IPC.gitUndoList, { repoPath }),
   gitUndoApply: (args) => ipcRenderer.invoke(IPC.gitUndoApply, args),
+  activityList: (limit) => ipcRenderer.invoke(IPC.activityList, limit ? { limit } : {}),
   worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),
   worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
   worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),
@@ -256,6 +260,11 @@ const api: GitGuiApi = {
     ): void => cb(payload)
     ipcRenderer.on(IPC_EVENTS.gitProgress, listener)
     return () => ipcRenderer.removeListener(IPC_EVENTS.gitProgress, listener)
+  },
+  onActivity: (cb) => {
+    const listener = (_e: Electron.IpcRendererEvent, entry: ActivityEntryDto): void => cb(entry)
+    ipcRenderer.on(IPC_EVENTS.activityNew, listener)
+    return () => ipcRenderer.removeListener(IPC_EVENTS.activityNew, listener)
   }
 }
 

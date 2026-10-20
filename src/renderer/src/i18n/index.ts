@@ -249,6 +249,24 @@ export const zh = {
   'undo.riskGeneric': '继续可能覆盖当前的仓库状态。',
   'undo.forceConfirm': '仍然继续',
 
+  'toolbar.settings': '设置',
+
+  'settings.title': '设置',
+  'settings.autoFetch': '自动拉取（Auto-Fetch）',
+  'settings.autoFetchInterval': '拉取间隔',
+  'settings.autoFetchOff': '关闭',
+  'settings.autoFetchMinutes': '{n} 分钟',
+  'settings.autoFetchHint': '后台按间隔对已打开的仓库执行 git fetch。',
+  'settings.autoPrune': '自动清理失效的远程分支（--prune）',
+
+  'activity.title': '活动日志',
+  'activity.empty': '暂无记录',
+  'activity.kind.autoFetch': '自动拉取',
+  'activity.kind.fetch': '获取远端',
+  'activity.kind.pull': '拉取',
+  'activity.kind.push': '推送',
+  'activity.failed': '失败',
+
   'error.notRepo': '不是 git 仓库',
   'error.generic': '操作失败'
 }
@@ -503,6 +521,24 @@ export const en = {
   'undo.riskForcePush': "These branches' upstreams have advanced — pushing after undo may need a force push: {branches}",
   'undo.riskGeneric': 'Continuing may overwrite the current repository state.',
   'undo.forceConfirm': 'Continue anyway',
+
+  'toolbar.settings': 'Settings',
+
+  'settings.title': 'Settings',
+  'settings.autoFetch': 'Auto-fetch',
+  'settings.autoFetchInterval': 'Fetch interval',
+  'settings.autoFetchOff': 'Off',
+  'settings.autoFetchMinutes': '{n} min',
+  'settings.autoFetchHint': 'Runs git fetch on open repositories in the background at this interval.',
+  'settings.autoPrune': 'Prune stale remote-tracking branches (--prune)',
+
+  'activity.title': 'Activity log',
+  'activity.empty': 'No entries yet',
+  'activity.kind.autoFetch': 'Auto-fetch',
+  'activity.kind.fetch': 'Fetch',
+  'activity.kind.pull': 'Pull',
+  'activity.kind.push': 'Push',
+  'activity.failed': 'Failed',
 
   'error.notRepo': 'Not a git repository',
   'error.generic': 'Operation failed'

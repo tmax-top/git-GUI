@@ -5,6 +5,7 @@ import { z } from 'zod'
 import {
   IPC,
   IPC_EVENTS,
+  activityListRequestSchema,
   applyHunkRequestSchema,
   blobRequestSchema,
   branchDeleteRequestSchema,
@@ -51,6 +52,7 @@ import {
   worktreeRemoveRequestSchema
 } from '../shared/ipc'
 import type {
+  ActivityEntryDto,
   AppInfoDto,
   BlobDto,
   CommitDto,
@@ -129,9 +131,19 @@ import {
 } from './git'
 import { loadSession, loadSettings, updateSession, updateSettings } from './settings'
 import { RepoWatcher } from './watcher'
+import { AutoFetchScheduler } from './autofetch'
+import { initActivityLog, listActivity, logActivity, setActivityListener } from './log/activity'
 
 const abortControllers = new Map<string, AbortController>()
 const watcher = new RepoWatcher()
+const autoFetch = new AutoFetchScheduler({
+  loadSettings,
+  loadSession,
+  fetch: (repoPath, opts) => fetch(repoPath, { prune: opts.prune }),
+  onChanged: broadcastRepoChanged,
+  // Don't compete with a manual sync op (fetch/pull/push/clone in flight).
+  shouldSkip: () => abortControllers.size > 0
+})
 
 function handle<S extends z.ZodTypeAny, R>(
   channel: string,
@@ -191,6 +203,20 @@ async function withAbort(
 }
 
 export function registerIpcHandlers(): void {
+  // --- activity log + auto-fetch -------------------------------------------
+  void initActivityLog(join(app.getPath('userData'), 'logs')).then(() => {
+    setActivityListener((entry) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) win.webContents.send(IPC_EVENTS.activityNew, entry)
+      }
+    })
+    autoFetch.start()
+  })
+
+  handle(IPC.activityList, activityListRequestSchema, (arg): ActivityEntryDto[] =>
+    listActivity(arg.limit)
+  )
+
   // --- app / dialogs -------------------------------------------------------
   ipcMain.handle(IPC.appInfo, (): AppInfoDto => {
     return {
@@ -329,24 +355,46 @@ export function registerIpcHandlers(): void {
   })
 
   // --- sync (fetch/pull/push) with progress + cancel ------------------------
+  /** Run a sync op and record its outcome in the activity log. */
+  async function withActivity(
+    kind: ActivityEntryDto['kind'],
+    repoPath: string,
+    fn: () => Promise<void>
+  ): Promise<void> {
+    try {
+      await fn()
+      await logActivity({ kind, repoPath, ok: true })
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      await logActivity({ kind, repoPath, ok: false, message })
+      throw e
+    }
+  }
+
   handle(IPC.gitFetch, syncRequestSchema, (arg) =>
-    withAbort(arg.opId, (signal, onProgress) => fetch(arg.repoPath, { signal, onProgress }))
+    withActivity('fetch', arg.repoPath, () =>
+      withAbort(arg.opId, (signal, onProgress) => fetch(arg.repoPath, { signal, onProgress }))
+    )
   )
 
   handle(IPC.gitPull, syncRequestSchema, (arg) =>
-    withAbort(arg.opId, (signal, onProgress) =>
-      pull(arg.repoPath, { signal, onProgress, rebase: arg.rebase })
+    withActivity('pull', arg.repoPath, () =>
+      withAbort(arg.opId, (signal, onProgress) =>
+        pull(arg.repoPath, { signal, onProgress, rebase: arg.rebase })
+      )
     )
   )
 
   handle(IPC.gitPush, syncRequestSchema, (arg) =>
-    withAbort(arg.opId, (signal, onProgress) =>
-      push(arg.repoPath, {
-        signal,
-        onProgress,
-        forceWithLease: arg.forceWithLease,
-        setUpstream: arg.setUpstream
-      })
+    withActivity('push', arg.repoPath, () =>
+      withAbort(arg.opId, (signal, onProgress) =>
+        push(arg.repoPath, {
+          signal,
+          onProgress,
+          forceWithLease: arg.forceWithLease,
+          setUpstream: arg.setUpstream
+        })
+      )
     )
   )
 
@@ -515,6 +563,8 @@ export function registerIpcHandlers(): void {
 }
 
 export function disposeWatchers(): void {
+  autoFetch.stop()
+  setActivityListener(null)
   watcher.stopAll()
   for (const controller of abortControllers.values()) controller.abort()
   abortControllers.clear()

@@ -99,6 +99,8 @@ interface AppState {
   rebaseDialog: RebaseDialogState | null
   /** Global search dialog visibility (commit / file path / content scopes). */
   searchOpen: boolean
+  /** Settings dialog visibility (auto-fetch / prune / activity log). */
+  settingsOpen: boolean
   /** Undo/redo stack state for the open repo (owned by the main process). */
   undoInfo: UndoStackStateDto
 
@@ -141,6 +143,8 @@ interface AppState {
   closeRebaseDialog(): void
   openSearch(): void
   closeSearch(): void
+  openSettings(): void
+  closeSettings(): void
   refreshUndo(): Promise<void>
   undo(): Promise<void>
   redo(): Promise<void>
@@ -343,6 +347,7 @@ export const useApp = create<AppState>((set, get) => {
     prompt: null,
     rebaseDialog: null,
     searchOpen: false,
+    settingsOpen: false,
     undoInfo: { canUndo: false, canRedo: false },
     settings: {
       favorites: [],
@@ -355,7 +360,9 @@ export const useApp = create<AppState>((set, get) => {
       graphSplitPct: 55,
       graphAuthorWidth: 112,
       graphDateWidth: 48,
-      graphOidWidth: 40
+      graphOidWidth: 40,
+      autoFetchInterval: 0,
+      autoPrune: true
     },
 
     async boot(): Promise<void> {
@@ -426,6 +433,7 @@ export const useApp = create<AppState>((set, get) => {
           prompt: null,
           rebaseDialog: null,
           searchOpen: false,
+          settingsOpen: false,
           undoInfo: { canUndo: false, canRedo: false }
         })
         await window.api.watchStart(path)
@@ -461,6 +469,7 @@ export const useApp = create<AppState>((set, get) => {
         prompt: null,
         rebaseDialog: null,
         searchOpen: false,
+        settingsOpen: false,
         undoInfo: { canUndo: false, canRedo: false }
       })
       void window.api.sessionSet({ activeRepo: null })
@@ -792,6 +801,14 @@ export const useApp = create<AppState>((set, get) => {
 
     closeSearch(): void {
       set({ searchOpen: false })
+    },
+
+    openSettings(): void {
+      set({ settingsOpen: true })
+    },
+
+    closeSettings(): void {
+      set({ settingsOpen: false })
     },
 
     async refreshUndo(): Promise<void> {

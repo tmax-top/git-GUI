@@ -23,6 +23,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const updateSettings = useApp((s) => s.updateSettings)
   const closeRepo = useApp((s) => s.closeRepo)
   const openSearch = useApp((s) => s.openSearch)
+  const openSettings = useApp((s) => s.openSettings)
   const undoInfo = useApp((s) => s.undoInfo)
   const undo = useApp((s) => s.undo)
   const redo = useApp((s) => s.redo)
@@ -127,6 +128,13 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
         onClick={() => void updateSettings({ language: 'en' })}
       >
         EN
+      </button>
+      <button
+        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+        onClick={() => openSettings()}
+        title={t('toolbar.settings')}
+      >
+        ⚙
       </button>
 
       {sync && (

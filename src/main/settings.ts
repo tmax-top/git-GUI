@@ -19,6 +19,10 @@ export interface AppSettings {
   graphAuthorWidth: number
   graphDateWidth: number
   graphOidWidth: number
+  /** Background auto-fetch period in minutes; 0 = disabled. */
+  autoFetchInterval: number
+  /** Pass `--prune` on auto-fetch to drop stale remote-tracking refs. */
+  autoPrune: boolean
 }
 
 export interface SessionState {
@@ -37,7 +41,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   graphSplitPct: 55,
   graphAuthorWidth: 112,
   graphDateWidth: 48,
-  graphOidWidth: 40
+  graphOidWidth: 40,
+  autoFetchInterval: 0,
+  autoPrune: true
 }
 
 const DEFAULT_SESSION: SessionState = {
