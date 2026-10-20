@@ -9,6 +9,19 @@ export interface DiffOptions {
   paths?: string[]
   contextLines?: number
   signal?: AbortSignal
+  /** Worktree encoding for the diff output (repo setting); default utf-8. */
+  encoding?: string
+}
+
+/** Decode raw git output with the repo's encoding (TextDecoder labels: gbk, big5, …). */
+function decode(buf: Buffer, encoding?: string): string {
+  const label = (encoding || 'utf-8').toLowerCase()
+  if (label === 'utf-8' || label === 'utf8') return buf.toString('utf8')
+  try {
+    return new TextDecoder(label).decode(buf)
+  } catch {
+    return buf.toString('utf8')
+  }
 }
 
 export async function getDiff(repoPath: string, opts: DiffOptions = {}): Promise<DiffFile[]> {
@@ -22,8 +35,8 @@ export async function getDiffText(repoPath: string, opts: DiffOptions = {}): Pro
   if (opts.paths && opts.paths.length > 0) {
     args.push('--', ...opts.paths)
   }
-  const { stdout } = await execGitOrThrow({ cwd: repoPath, args, signal: opts.signal })
-  return stdout
+  const result = await execGitOrThrow({ cwd: repoPath, args, signal: opts.signal, binary: true })
+  return decode(result.stdoutBuf ?? Buffer.alloc(0), opts.encoding)
 }
 
 /**
@@ -33,23 +46,25 @@ export async function getDiffText(repoPath: string, opts: DiffOptions = {}): Pro
 export async function getUntrackedDiff(
   repoPath: string,
   path: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  encoding?: string
 ): Promise<string> {
   const result = await execGit({
     cwd: repoPath,
     args: ['diff', '--no-index', '--', '/dev/null', path],
-    signal
+    signal,
+    binary: true
   })
   if (result.code !== 0 && result.code !== 1) {
     throw new Error(`git diff --no-index failed (${result.code}): ${result.stderr.trim()}`)
   }
-  return result.stdout
+  return decode(result.stdoutBuf ?? Buffer.alloc(0), encoding)
 }
 
 export async function getCommitDiffText(
   repoPath: string,
   oid: string,
-  opts: { paths?: string[]; signal?: AbortSignal } = {}
+  opts: { paths?: string[]; signal?: AbortSignal; encoding?: string } = {}
 ): Promise<string> {
   // `git show` on a merge commit emits a combined diff that is usually empty —
   // diff against the first parent instead (what GitKraken/Sourcetree show).
@@ -67,6 +82,11 @@ export async function getCommitDiffText(
   if (opts.paths && opts.paths.length > 0) {
     args.push('--', ...opts.paths)
   }
-  const { stdout } = await execGitOrThrow({ cwd: repoPath, args, signal: opts.signal })
-  return stdout
+  const result = await execGitOrThrow({
+    cwd: repoPath,
+    args,
+    signal: opts.signal,
+    binary: true
+  })
+  return decode(result.stdoutBuf ?? Buffer.alloc(0), opts.encoding)
 }

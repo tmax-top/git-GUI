@@ -4,6 +4,7 @@ import type {
   GitflowStatusDto,
   HookDto,
   LfsStatusDto,
+  RepoSettingsDto,
   SigningStatusDto
 } from '@shared/ipc'
 import { useApp } from '../store'
@@ -159,8 +160,131 @@ export function SettingsDialog(): React.JSX.Element {
         <GitflowSection />
         <SigningSection />
         <ExternalToolsSection />
+        <RepoSettingsSection />
       </div>
     </Modal>
+  )
+}
+
+const ENCODINGS = ['utf-8', 'gbk', 'gb18030', 'big5', 'shift_jis', 'euc-kr']
+
+function RepoSettingsSection(): React.JSX.Element {
+  const repoPath = useApp((s) => s.repoPath)
+  const [settings, setSettings] = useState<RepoSettingsDto | null>(null)
+  const [encoding, setEncoding] = useState('utf-8')
+  const [defaultBranch, setDefaultBranch] = useState('main')
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!repoPath) return
+    let alive = true
+    void window.api.repoSettingsGet(repoPath).then((s) => {
+      if (!alive) return
+      setSettings(s)
+      setEncoding(s.encoding)
+      setDefaultBranch(s.defaultBranch)
+    })
+    return () => {
+      alive = false
+    }
+  }, [repoPath])
+
+  const save = async (): Promise<void> => {
+    if (!repoPath || saving) return
+    setSaving(true)
+    try {
+      const next = await window.api.repoSettingsSet({
+        repoPath,
+        encoding,
+        defaultBranch: defaultBranch.trim()
+      })
+      setSettings(next)
+      setMsg(null)
+    } catch {
+      setMsg(t('error.generic'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const cleanOrig = async (): Promise<void> => {
+    if (!repoPath) return
+    try {
+      const removed = await window.api.repoCleanOrig(repoPath)
+      const next = await window.api.repoSettingsGet(repoPath)
+      setSettings(next)
+      setMsg(tf('repoSettings.origDone', { n: removed.length }))
+    } catch {
+      setMsg(t('error.generic'))
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-sm font-semibold text-zinc-200">{t('repoSettings.title')}</div>
+      <div className="text-xs text-zinc-500">{t('repoSettings.hint')}</div>
+      {!repoPath && <div className="text-sm text-zinc-500">{t('repoSettings.noRepo')}</div>}
+      {repoPath && settings && (
+        <>
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <span className="w-28 shrink-0">{t('repoSettings.encoding')}</span>
+            <select
+              className={`${inputClass()} w-40`}
+              value={encoding}
+              onChange={(e) => setEncoding(e.target.value)}
+            >
+              {ENCODINGS.map((enc) => (
+                <option key={enc} value={enc}>
+                  {enc}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="pl-28 text-xs text-zinc-500">{t('repoSettings.encodingHint')}</div>
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <span className="w-28 shrink-0">{t('repoSettings.defaultBranch')}</span>
+            <input
+              className={inputClass()}
+              value={defaultBranch}
+              onChange={(e) => setDefaultBranch(e.target.value)}
+            />
+          </label>
+          <div className="pl-28 text-xs text-zinc-500">{t('repoSettings.defaultBranchHint')}</div>
+          <div>
+            <button className={btnPrimary()} disabled={saving} onClick={() => void save()}>
+              {t('repoSettings.save')}
+            </button>
+          </div>
+
+          <div className="text-sm font-semibold text-zinc-200">
+            {t('repoSettings.orig')}
+          </div>
+          {settings.origFiles.length === 0 ? (
+            <div className="text-xs text-zinc-500">{t('repoSettings.origNone')}</div>
+          ) : (
+            <>
+              <div className="text-xs text-zinc-400">
+                {tf('repoSettings.origCount', { n: settings.origFiles.length })}
+              </div>
+              <ul className="max-h-24 overflow-y-auto pl-4 text-xs text-zinc-500">
+                {settings.origFiles.map((f) => (
+                  <li key={f} className="truncate">
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <div>
+                <button className={btnGhost()} onClick={() => void cleanOrig()}>
+                  {t('repoSettings.origClean')}
+                </button>
+              </div>
+            </>
+          )}
+          {msg && <div className="text-xs text-zinc-400">{msg}</div>}
+        </>
+      )}
+    </div>
   )
 }
 

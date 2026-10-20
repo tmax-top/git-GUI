@@ -71,6 +71,9 @@ export const IPC = {
   signingStatus: 'signing:status',
   signingSet: 'signing:set',
   toolsOpen: 'tools:open',
+  repoSettingsGet: 'repoSettings:get',
+  repoSettingsSet: 'repoSettings:set',
+  repoCleanOrig: 'repoSettings:cleanOrig',
   worktreeList: 'worktree:list',
   worktreeAdd: 'worktree:add',
   worktreeRemove: 'worktree:remove'

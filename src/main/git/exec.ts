@@ -36,7 +36,7 @@ export function gitBin(): string {
 
 export function execGit(opts: GitExecOptions): Promise<GitExecResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(gitBin(), opts.args, {
+    const child = spawn(gitBin(), ['-c', 'core.quotepath=false', ...opts.args], {
       cwd: opts.cwd,
       env: {
         ...process.env,

@@ -18,6 +18,7 @@ import type {
   RebaseOpDto,
   RebaseRangeCommitDto,
   RepoValidateDto,
+  RepoSettingsDto,
   SearchCommitHitDto,
   SearchContentHitDto,
   SearchScope,
@@ -197,6 +198,13 @@ export interface GitGuiApi {
     kind: 'editor' | 'diffTool' | 'mergeTool' | 'terminal'
     path?: string
   }): Promise<void>
+  repoSettingsGet(repoPath: string): Promise<RepoSettingsDto>
+  repoSettingsSet(args: {
+    repoPath: string
+    encoding?: string
+    defaultBranch?: string
+  }): Promise<RepoSettingsDto>
+  repoCleanOrig(repoPath: string): Promise<string[]>
   worktreeList(repoPath: string): Promise<WorktreeInfoDto[]>
   worktreeAdd(args: {
     repoPath: string
@@ -288,6 +296,9 @@ const api: GitGuiApi = {
   signingStatus: (repoPath) => ipcRenderer.invoke(IPC.signingStatus, { repoPath }),
   signingSet: (args) => ipcRenderer.invoke(IPC.signingSet, args),
   toolsOpen: (args) => ipcRenderer.invoke(IPC.toolsOpen, args),
+  repoSettingsGet: (repoPath) => ipcRenderer.invoke(IPC.repoSettingsGet, { repoPath }),
+  repoSettingsSet: (args) => ipcRenderer.invoke(IPC.repoSettingsSet, args),
+  repoCleanOrig: (repoPath) => ipcRenderer.invoke(IPC.repoCleanOrig, { repoPath }),
   worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),
   worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
   worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),

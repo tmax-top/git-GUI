@@ -58,7 +58,9 @@ import {
   gitflowStartRequestSchema,
   gitflowFinishRequestSchema,
   signingSetRequestSchema,
-  toolsOpenRequestSchema
+  toolsOpenRequestSchema,
+  repoSettingsSetRequestSchema,
+  type RepoSettingsDto
 } from '../shared/ipc'
 import type {
   ActivityEntryDto,
@@ -152,6 +154,7 @@ import { lfsStatus, setLfsFetchPolicy } from './git/lfs'
 import { gitflowFinish, gitflowInit, gitflowStart, gitflowStatus } from './git/gitflow'
 import { setSigning, signingStatus } from './git/signing'
 import { openExternalTool, toolForKind } from './tools'
+import { cleanOrigFiles, getRepoSettings, repoEncoding, setRepoSettings } from './git/repoConfig'
 
 const abortControllers = new Map<string, AbortController>()
 const watcher = new RepoWatcher()
@@ -356,22 +359,25 @@ export function registerIpcHandlers(): void {
   })
 
   // --- diff / blob ---------------------------------------------------------
-  handle(IPC.gitDiffText, diffRequestSchema, (arg): Promise<string> => {
+  handle(IPC.gitDiffText, diffRequestSchema, async (arg): Promise<string> => {
+    const encoding = await repoEncoding(arg.repoPath)
     if (arg.untracked) {
       const path = arg.paths?.[0]
       if (!path) throw new Error('untracked diff requires a path')
-      return getUntrackedDiff(arg.repoPath, path)
+      return getUntrackedDiff(arg.repoPath, path, undefined, encoding)
     }
     return getDiffText(arg.repoPath, {
       cached: arg.cached,
       paths: arg.paths,
-      contextLines: arg.context
+      contextLines: arg.context,
+      encoding
     })
   })
 
-  handle(IPC.gitCommitDiff, commitDiffRequestSchema, (arg): Promise<string> =>
-    getCommitDiffText(arg.repoPath, arg.oid)
-  )
+  handle(IPC.gitCommitDiff, commitDiffRequestSchema, async (arg): Promise<string> => {
+    const encoding = await repoEncoding(arg.repoPath)
+    return getCommitDiffText(arg.repoPath, arg.oid, { encoding })
+  })
 
   handle(IPC.gitBlob, blobRequestSchema, async (arg): Promise<BlobDto> => getFileBlob(arg.repoPath, arg.spec))
 
@@ -658,6 +664,20 @@ export function registerIpcHandlers(): void {
     const command = toolForKind(externalTools, arg.kind)
     await openExternalTool(command, { repo: arg.repoPath, path: arg.path })
   })
+
+  // --- repo-level settings ------------------------------------------------------
+  handle(IPC.repoSettingsGet, opRepoSchema, (arg): Promise<RepoSettingsDto> =>
+    getRepoSettings(arg.repoPath)
+  )
+
+  handle(IPC.repoSettingsSet, repoSettingsSetRequestSchema, (arg): Promise<RepoSettingsDto> =>
+    setRepoSettings(arg.repoPath, {
+      encoding: arg.encoding,
+      defaultBranch: arg.defaultBranch
+    })
+  )
+
+  handle(IPC.repoCleanOrig, opRepoSchema, (arg): Promise<string[]> => cleanOrigFiles(arg.repoPath))
 
   // --- watcher -------------------------------------------------------------
   handle(IPC.watchStart, watchRequestSchema, (arg) => {

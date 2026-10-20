@@ -596,6 +596,18 @@ export const toolsOpenRequestSchema = opRepoSchema.extend({
   path: z.string().max(4096).optional()
 })
 
+/** Per-repo settings: worktree encoding, default branch, *.orig leftovers. */
+export interface RepoSettingsDto {
+  encoding: string
+  defaultBranch: string
+  origFiles: string[]
+}
+
+export const repoSettingsSetRequestSchema = opRepoSchema.extend({
+  encoding: z.string().min(1).max(32).optional(),
+  defaultBranch: z.string().min(1).max(255).optional()
+})
+
 const undoDescriptionSchema = z.object({
   key: z.string().min(1).max(128),
   params: z.record(z.string(), z.union([z.string(), z.number()])).optional()
