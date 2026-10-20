@@ -192,6 +192,11 @@ export interface GitGuiApi {
     format?: 'openpgp' | 'ssh' | 'x509'
     signingKey?: string
   }): Promise<SigningStatusDto>
+  toolsOpen(args: {
+    repoPath: string
+    kind: 'editor' | 'diffTool' | 'mergeTool' | 'terminal'
+    path?: string
+  }): Promise<void>
   worktreeList(repoPath: string): Promise<WorktreeInfoDto[]>
   worktreeAdd(args: {
     repoPath: string
@@ -282,6 +287,7 @@ const api: GitGuiApi = {
   gitflowFinish: (args) => ipcRenderer.invoke(IPC.gitflowFinish, args),
   signingStatus: (repoPath) => ipcRenderer.invoke(IPC.signingStatus, { repoPath }),
   signingSet: (args) => ipcRenderer.invoke(IPC.signingSet, args),
+  toolsOpen: (args) => ipcRenderer.invoke(IPC.toolsOpen, args),
   worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),
   worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
   worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),

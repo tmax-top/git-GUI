@@ -114,7 +114,20 @@ export interface AppSettingsDto {
   autoPrune: boolean
   /** Desktop notifications for push completion / conflicts / fetch failures. */
   notifications: boolean
+  /** User-configured external tool command lines; empty = feature off. */
+  externalTools: ExternalToolCommandDto
 }
+
+/** Command lines for opening files/repos in external tools. */
+export interface ExternalToolCommandDto {
+  /** Editor command; {repo}/{path} placeholders expand at launch. */
+  editor: string
+  diffTool: string
+  mergeTool: string
+  terminal: string
+}
+
+export type ExternalToolKind = 'editor' | 'diffTool' | 'mergeTool' | 'terminal'
 
 export interface SessionStateDto {
   openRepos: string[]
@@ -577,6 +590,12 @@ export const signingSetRequestSchema = opRepoSchema.extend({
   signingKey: z.string().max(4096).optional()
 })
 
+export const toolsOpenRequestSchema = opRepoSchema.extend({
+  kind: z.enum(['editor', 'diffTool', 'mergeTool', 'terminal']),
+  /** Optional file/dir the tool should open. */
+  path: z.string().max(4096).optional()
+})
+
 const undoDescriptionSchema = z.object({
   key: z.string().min(1).max(128),
   params: z.record(z.string(), z.union([z.string(), z.number()])).optional()
@@ -638,7 +657,15 @@ export const settingsPatchSchema = z.object({
   graphOidWidth: z.number().int().min(40).max(160).optional(),
   autoFetchInterval: z.number().int().min(0).max(60).optional(),
   autoPrune: z.boolean().optional(),
-  notifications: z.boolean().optional()
+  notifications: z.boolean().optional(),
+  externalTools: z
+    .object({
+      editor: z.string().max(1024),
+      diffTool: z.string().max(1024),
+      mergeTool: z.string().max(1024),
+      terminal: z.string().max(1024)
+    })
+    .optional()
 })
 
 /** Read back recent activity-log entries (newest first). */

@@ -70,6 +70,7 @@ export const IPC = {
   gitflowFinish: 'gitflow:finish',
   signingStatus: 'signing:status',
   signingSet: 'signing:set',
+  toolsOpen: 'tools:open',
   worktreeList: 'worktree:list',
   worktreeAdd: 'worktree:add',
   worktreeRemove: 'worktree:remove'

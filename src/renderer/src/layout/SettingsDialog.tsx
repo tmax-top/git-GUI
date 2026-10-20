@@ -158,8 +158,83 @@ export function SettingsDialog(): React.JSX.Element {
         <LfsSection />
         <GitflowSection />
         <SigningSection />
+        <ExternalToolsSection />
       </div>
     </Modal>
+  )
+}
+
+function ExternalToolsSection(): React.JSX.Element {
+  const repoPath = useApp((s) => s.repoPath)
+  const settings = useApp((s) => s.settings)
+  const updateSettings = useApp((s) => s.updateSettings)
+  const [editor, setEditor] = useState(settings.externalTools?.editor ?? '')
+  const [diffTool, setDiffTool] = useState(settings.externalTools?.diffTool ?? '')
+  const [mergeTool, setMergeTool] = useState(settings.externalTools?.mergeTool ?? '')
+  const [terminal, setTerminal] = useState(settings.externalTools?.terminal ?? '')
+  const [saving, setSaving] = useState(false)
+  const [hint, setHint] = useState<string | null>(null)
+
+  const save = async (): Promise<void> => {
+    setSaving(true)
+    try {
+      await updateSettings({
+        externalTools: { editor: editor.trim(), diffTool: diffTool.trim(), mergeTool: mergeTool.trim(), terminal: terminal.trim() }
+      })
+      setHint(null)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const launch = async (kind: 'editor' | 'terminal'): Promise<void> => {
+    const command = kind === 'editor' ? editor : terminal
+    if (!repoPath || command.trim() === '') {
+      setHint(t('tools.empty'))
+      return
+    }
+    try {
+      await window.api.toolsOpen({ repoPath, kind })
+      setHint(tf('tools.launched', { tool: command }))
+    } catch {
+      setHint(t('error.generic'))
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-sm font-semibold text-zinc-200">{t('tools.title')}</div>
+      <div className="text-xs text-zinc-500">{t('tools.hint')}</div>
+      {(
+        [
+          ['editor', editor, setEditor],
+          ['diffTool', diffTool, setDiffTool],
+          ['mergeTool', mergeTool, setMergeTool],
+          ['terminal', terminal, setTerminal]
+        ] as const
+      ).map(([kind, value, setValue]) => (
+        <label key={kind} className="flex items-center gap-2 text-sm text-zinc-300">
+          <span className="w-24 shrink-0">{t(`tools.${kind}` as MessageKey)}</span>
+          <input
+            className={inputClass()}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+          />
+        </label>
+      ))}
+      <div className="flex items-center gap-2">
+        <button className={btnPrimary()} disabled={saving} onClick={() => void save()}>
+          {t('tools.save')}
+        </button>
+        <button className={btnGhost()} onClick={() => void launch('editor')}>
+          {t('tools.openRepo')}
+        </button>
+        <button className={btnGhost()} onClick={() => void launch('terminal')}>
+          {t('tools.openTerminal')}
+        </button>
+      </div>
+      {hint && <div className="text-xs text-zinc-400">{hint}</div>}
+    </div>
   )
 }
 

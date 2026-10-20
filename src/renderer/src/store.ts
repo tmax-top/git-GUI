@@ -363,7 +363,8 @@ export const useApp = create<AppState>((set, get) => {
       graphOidWidth: 40,
       autoFetchInterval: 0,
       autoPrune: true,
-      notifications: true
+      notifications: true,
+      externalTools: { editor: '', diffTool: '', mergeTool: '', terminal: '' }
     },
 
     async boot(): Promise<void> {

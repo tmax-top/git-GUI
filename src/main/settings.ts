@@ -25,6 +25,13 @@ export interface AppSettings {
   autoPrune: boolean
   /** Desktop notifications for push completion / conflicts / fetch failures. */
   notifications: boolean
+  /** Command lines for external tools; empty string = feature off. */
+  externalTools: {
+    editor: string
+    diffTool: string
+    mergeTool: string
+    terminal: string
+  }
 }
 
 export interface SessionState {
@@ -46,7 +53,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   graphOidWidth: 40,
   autoFetchInterval: 0,
   autoPrune: true,
-  notifications: true
+  notifications: true,
+  externalTools: { editor: '', diffTool: '', mergeTool: '', terminal: '' }
 }
 
 const DEFAULT_SESSION: SessionState = {

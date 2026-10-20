@@ -57,7 +57,8 @@ import {
   lfsSetPolicyRequestSchema,
   gitflowStartRequestSchema,
   gitflowFinishRequestSchema,
-  signingSetRequestSchema
+  signingSetRequestSchema,
+  toolsOpenRequestSchema
 } from '../shared/ipc'
 import type {
   ActivityEntryDto,
@@ -150,6 +151,7 @@ import { listHooks, readHook, setHookEnabled } from './git/hooks'
 import { lfsStatus, setLfsFetchPolicy } from './git/lfs'
 import { gitflowFinish, gitflowInit, gitflowStart, gitflowStatus } from './git/gitflow'
 import { setSigning, signingStatus } from './git/signing'
+import { openExternalTool, toolForKind } from './tools'
 
 const abortControllers = new Map<string, AbortController>()
 const watcher = new RepoWatcher()
@@ -648,6 +650,13 @@ export function registerIpcHandlers(): void {
       signingKey: arg.signingKey
     })
     return signingStatus(arg.repoPath)
+  })
+
+  // --- external tools -----------------------------------------------------------
+  handle(IPC.toolsOpen, toolsOpenRequestSchema, async (arg): Promise<void> => {
+    const { externalTools } = await loadSettings()
+    const command = toolForKind(externalTools, arg.kind)
+    await openExternalTool(command, { repo: arg.repoPath, path: arg.path })
   })
 
   // --- watcher -------------------------------------------------------------
