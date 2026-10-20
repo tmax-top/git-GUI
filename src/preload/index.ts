@@ -7,6 +7,7 @@ import type {
   ConflictsDto,
   ConflictFileDto,
   GitStatusDto,
+  GitflowStatusDto,
   GraphPageDto,
   HookDto,
   Language,
@@ -172,6 +173,17 @@ export interface GitGuiApi {
     fetchInclude?: string
     fetchExclude?: string
   }): Promise<LfsStatusDto>
+  gitflowStatus(repoPath: string): Promise<GitflowStatusDto>
+  gitflowInit(repoPath: string): Promise<GitflowStatusDto>
+  gitflowStart(args: {
+    repoPath: string
+    kind: 'feature' | 'release' | 'hotfix'
+    name: string
+  }): Promise<GitflowStatusDto>
+  gitflowFinish(args: {
+    repoPath: string
+    kind: 'feature' | 'release' | 'hotfix'
+  }): Promise<GitflowStatusDto>
   worktreeList(repoPath: string): Promise<WorktreeInfoDto[]>
   worktreeAdd(args: {
     repoPath: string
@@ -256,6 +268,10 @@ const api: GitGuiApi = {
   hookSetEnabled: (args) => ipcRenderer.invoke(IPC.hookSetEnabled, args),
   lfsStatus: (repoPath) => ipcRenderer.invoke(IPC.lfsStatus, { repoPath }),
   lfsSetPolicy: (args) => ipcRenderer.invoke(IPC.lfsSetPolicy, args),
+  gitflowStatus: (repoPath) => ipcRenderer.invoke(IPC.gitflowStatus, { repoPath }),
+  gitflowInit: (repoPath) => ipcRenderer.invoke(IPC.gitflowInit, { repoPath }),
+  gitflowStart: (args) => ipcRenderer.invoke(IPC.gitflowStart, args),
+  gitflowFinish: (args) => ipcRenderer.invoke(IPC.gitflowFinish, args),
   worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),
   worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
   worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),

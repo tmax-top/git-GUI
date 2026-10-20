@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { ActivityEntryDto, HookDto, LfsStatusDto } from '@shared/ipc'
+import type { ActivityEntryDto, GitflowStatusDto, HookDto, LfsStatusDto } from '@shared/ipc'
 import { useApp } from '../store'
 import { t, tf, type MessageKey } from '../i18n'
 import { Modal, btnGhost, btnPrimary, inputClass } from '../components/Modal'
@@ -150,8 +150,128 @@ export function SettingsDialog(): React.JSX.Element {
         <ActivityLog />
         <HooksSection />
         <LfsSection />
+        <GitflowSection />
       </div>
     </Modal>
+  )
+}
+
+const FLOW_KINDS = ['feature', 'release', 'hotfix'] as const
+type FlowKind = (typeof FLOW_KINDS)[number]
+
+const FLOW_KIND_KEY: Record<FlowKind, MessageKey> = {
+  feature: 'gitflow.startFeature',
+  release: 'gitflow.startRelease',
+  hotfix: 'gitflow.startHotfix'
+}
+
+function GitflowSection(): React.JSX.Element {
+  const repoPath = useApp((s) => s.repoPath)
+  const refreshAll = useApp((s) => s.refreshAll)
+  const [status, setStatus] = useState<GitflowStatusDto | null>(null)
+  const [kind, setKind] = useState<FlowKind>('feature')
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!repoPath) return
+    let alive = true
+    void window.api.gitflowStatus(repoPath).then((s) => {
+      if (alive) setStatus(s)
+    })
+    return () => {
+      alive = false
+    }
+  }, [repoPath])
+
+  const run = async (fn: () => Promise<GitflowStatusDto>): Promise<void> => {
+    if (!repoPath || busy) return
+    setBusy(true)
+    try {
+      setStatus(await fn())
+      await refreshAll()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const start = (): Promise<GitflowStatusDto> => {
+    if (!repoPath) throw new Error('no repo')
+    return window.api.gitflowStart({ repoPath, kind, name: name.trim() }).then((s) => {
+      setName('')
+      return s
+    })
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-sm font-semibold text-zinc-200">{t('gitflow.title')}</div>
+      <div className="text-xs text-zinc-500">{t('gitflow.hint')}</div>
+      {!repoPath && <div className="text-sm text-zinc-500">{t('gitflow.noRepo')}</div>}
+      {repoPath && status && (
+        <>
+          {status.developExists ? (
+            <div className="text-sm text-zinc-400">
+              {tf('gitflow.developReady', { main: status.mainBranch })}
+            </div>
+          ) : (
+            <div>
+              <button
+                className={btnPrimary()}
+                disabled={busy}
+                onClick={() => void run(() => window.api.gitflowInit(repoPath))}
+              >
+                {t('gitflow.init')}
+              </button>
+            </div>
+          )}
+          {status.currentBranch && (
+            <div className="text-xs text-zinc-500">
+              {tf('gitflow.current', { branch: status.currentBranch })}
+            </div>
+          )}
+          {status.developExists && (
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                className={`${inputClass()} w-28`}
+                value={kind}
+                onChange={(e) => setKind(e.target.value as FlowKind)}
+              >
+                {FLOW_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {t(FLOW_KIND_KEY[k])}
+                  </option>
+                ))}
+              </select>
+              <input
+                className={inputClass()}
+                value={name}
+                placeholder={t('gitflow.branchName')}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <button className={btnGhost()} disabled={busy || !name.trim()} onClick={() => void run(start)}>
+                {t(FLOW_KIND_KEY[kind])}
+              </button>
+            </div>
+          )}
+          {status.currentKind && (
+            <div>
+              <button
+                className={btnGhost()}
+                disabled={busy}
+                onClick={() => {
+                  const k = status.currentKind
+                  if (!k) return
+                  void run(() => window.api.gitflowFinish({ repoPath, kind: k }))
+                }}
+              >
+                {tf('gitflow.finish', { kind: status.currentKind })}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   )
 }
 

@@ -277,6 +277,15 @@ export interface LfsStatusDto {
   fetchExclude: string
 }
 
+/** Gitflow state: main/develop lines and the current branch's flow role. */
+export interface GitflowStatusDto {
+  mainBranch: string
+  developBranch: string
+  developExists: boolean
+  currentBranch?: string
+  currentKind?: 'feature' | 'release' | 'hotfix'
+}
+
 /** i18n key (+ interpolation params) describing one undoable operation. */
 export interface UndoDescriptionDto {
   key: string
@@ -536,6 +545,19 @@ export const lfsSetPolicyRequestSchema = opRepoSchema.extend({
   fetchInclude: z.string().max(1024).optional(),
   fetchExclude: z.string().max(1024).optional()
 })
+
+export const gitflowKindSchema = z.enum(['feature', 'release', 'hotfix'])
+
+export const gitflowStartRequestSchema = opRepoSchema.extend({
+  kind: gitflowKindSchema,
+  name: z
+    .string()
+    .min(1)
+    .max(200)
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._/-]*$/, 'invalid branch name')
+})
+
+export const gitflowFinishRequestSchema = opRepoSchema.extend({ kind: gitflowKindSchema })
 
 const undoDescriptionSchema = z.object({
   key: z.string().min(1).max(128),

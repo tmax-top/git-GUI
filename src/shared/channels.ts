@@ -64,6 +64,10 @@ export const IPC = {
   hookSetEnabled: 'hooks:setEnabled',
   lfsStatus: 'lfs:status',
   lfsSetPolicy: 'lfs:setPolicy',
+  gitflowStatus: 'gitflow:status',
+  gitflowInit: 'gitflow:init',
+  gitflowStart: 'gitflow:start',
+  gitflowFinish: 'gitflow:finish',
   worktreeList: 'worktree:list',
   worktreeAdd: 'worktree:add',
   worktreeRemove: 'worktree:remove'

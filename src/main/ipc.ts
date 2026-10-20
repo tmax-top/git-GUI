@@ -54,7 +54,9 @@ import {
   hookReadRequestSchema,
   hookSetEnabledRequestSchema,
   lfsStatusRequestSchema,
-  lfsSetPolicyRequestSchema
+  lfsSetPolicyRequestSchema,
+  gitflowStartRequestSchema,
+  gitflowFinishRequestSchema
 } from '../shared/ipc'
 import type {
   ActivityEntryDto,
@@ -63,6 +65,7 @@ import type {
   CommitDto,
   ConflictsDto,
   GitStatusDto,
+  GitflowStatusDto,
   GraphPageDto,
   HookDto,
   LfsStatusDto,
@@ -143,6 +146,7 @@ import { initActivityLog, listActivity, logActivity, setActivityListener } from 
 import { notifyForSync, showDesktopNotification } from './notify'
 import { listHooks, readHook, setHookEnabled } from './git/hooks'
 import { lfsStatus, setLfsFetchPolicy } from './git/lfs'
+import { gitflowFinish, gitflowInit, gitflowStart, gitflowStatus } from './git/gitflow'
 
 const abortControllers = new Map<string, AbortController>()
 const watcher = new RepoWatcher()
@@ -607,6 +611,26 @@ export function registerIpcHandlers(): void {
       fetchExclude: arg.fetchExclude
     })
     return lfsStatus(arg.repoPath)
+  })
+
+  // --- gitflow (plain git, no git-flow CLI) --------------------------------
+  handle(IPC.gitflowStatus, opRepoSchema, async (arg): Promise<GitflowStatusDto> =>
+    gitflowStatus(arg.repoPath)
+  )
+
+  handle(IPC.gitflowInit, opRepoSchema, async (arg): Promise<GitflowStatusDto> => {
+    await gitflowInit(arg.repoPath)
+    return gitflowStatus(arg.repoPath)
+  })
+
+  handle(IPC.gitflowStart, gitflowStartRequestSchema, async (arg): Promise<GitflowStatusDto> => {
+    await gitflowStart(arg.repoPath, arg.kind, arg.name)
+    return gitflowStatus(arg.repoPath)
+  })
+
+  handle(IPC.gitflowFinish, gitflowFinishRequestSchema, async (arg): Promise<GitflowStatusDto> => {
+    await gitflowFinish(arg.repoPath, arg.kind)
+    return gitflowStatus(arg.repoPath)
   })
 
   // --- watcher -------------------------------------------------------------
