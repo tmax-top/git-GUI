@@ -60,7 +60,11 @@ import {
   signingSetRequestSchema,
   toolsOpenRequestSchema,
   repoSettingsSetRequestSchema,
-  type RepoSettingsDto
+  submodulePathRequestSchema,
+  submoduleSetUpdateRequestSchema,
+  submoduleSetRecurseRequestSchema,
+  type RepoSettingsDto,
+  type SubmoduleDetailDto
 } from '../shared/ipc'
 import type {
   ActivityEntryDto,
@@ -155,6 +159,14 @@ import { gitflowFinish, gitflowInit, gitflowStart, gitflowStatus } from './git/g
 import { setSigning, signingStatus } from './git/signing'
 import { openExternalTool, toolForKind } from './tools'
 import { cleanOrigFiles, getRepoSettings, repoEncoding, setRepoSettings } from './git/repoConfig'
+import {
+  setSubmoduleRecurse,
+  getSubmoduleRecurse,
+  setSubmoduleUpdate,
+  submoduleDetails,
+  submoduleInit,
+  submoduleUpdate
+} from './git/submodule'
 
 const abortControllers = new Map<string, AbortController>()
 const watcher = new RepoWatcher()
@@ -678,6 +690,39 @@ export function registerIpcHandlers(): void {
   )
 
   handle(IPC.repoCleanOrig, opRepoSchema, (arg): Promise<string[]> => cleanOrigFiles(arg.repoPath))
+
+  // --- submodules ---------------------------------------------------------------
+  handle(IPC.submoduleDetails, opRepoSchema, async (arg): Promise<SubmoduleDetailDto[]> =>
+    submoduleDetails(arg.repoPath)
+  )
+
+  handle(IPC.submoduleInit, submodulePathRequestSchema, async (arg): Promise<SubmoduleDetailDto[]> => {
+    await submoduleInit(arg.repoPath, arg.path)
+    return submoduleDetails(arg.repoPath)
+  })
+
+  handle(
+    IPC.submoduleUpdate,
+    submodulePathRequestSchema,
+    async (arg): Promise<SubmoduleDetailDto[]> => {
+      await submoduleUpdate(arg.repoPath, arg.path, arg.recursive)
+      return submoduleDetails(arg.repoPath)
+    }
+  )
+
+  handle(IPC.submoduleSetUpdate, submoduleSetUpdateRequestSchema, async (arg) => {
+    await setSubmoduleUpdate(arg.repoPath, arg.path, arg.strategy)
+    return submoduleDetails(arg.repoPath)
+  })
+
+  handle(IPC.submoduleGetRecurse, opRepoSchema, async (arg): Promise<{ recurse: boolean }> => ({
+    recurse: await getSubmoduleRecurse(arg.repoPath)
+  }))
+
+  handle(IPC.submoduleSetRecurse, submoduleSetRecurseRequestSchema, async (arg) => {
+    await setSubmoduleRecurse(arg.repoPath, arg.value)
+    return { recurse: await getSubmoduleRecurse(arg.repoPath) }
+  })
 
   // --- watcher -------------------------------------------------------------
   handle(IPC.watchStart, watchRequestSchema, (arg) => {

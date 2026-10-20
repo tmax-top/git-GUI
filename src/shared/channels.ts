@@ -74,6 +74,12 @@ export const IPC = {
   repoSettingsGet: 'repoSettings:get',
   repoSettingsSet: 'repoSettings:set',
   repoCleanOrig: 'repoSettings:cleanOrig',
+  submoduleDetails: 'submodule:details',
+  submoduleInit: 'submodule:init',
+  submoduleUpdate: 'submodule:update',
+  submoduleSetUpdate: 'submodule:setUpdate',
+  submoduleGetRecurse: 'submodule:getRecurse',
+  submoduleSetRecurse: 'submodule:setRecurse',
   worktreeList: 'worktree:list',
   worktreeAdd: 'worktree:add',
   worktreeRemove: 'worktree:remove'

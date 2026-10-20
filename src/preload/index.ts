@@ -19,6 +19,7 @@ import type {
   RebaseRangeCommitDto,
   RepoValidateDto,
   RepoSettingsDto,
+  SubmoduleDetailDto,
   SearchCommitHitDto,
   SearchContentHitDto,
   SearchScope,
@@ -205,6 +206,20 @@ export interface GitGuiApi {
     defaultBranch?: string
   }): Promise<RepoSettingsDto>
   repoCleanOrig(repoPath: string): Promise<string[]>
+  submoduleDetails(repoPath: string): Promise<SubmoduleDetailDto[]>
+  submoduleInit(args: { repoPath: string; path?: string }): Promise<SubmoduleDetailDto[]>
+  submoduleUpdate(args: {
+    repoPath: string
+    path?: string
+    recursive?: boolean
+  }): Promise<SubmoduleDetailDto[]>
+  submoduleSetUpdate(args: {
+    repoPath: string
+    path: string
+    strategy: 'checkout' | 'merge' | 'rebase' | 'none' | null
+  }): Promise<SubmoduleDetailDto[]>
+  submoduleGetRecurse(repoPath: string): Promise<{ recurse: boolean }>
+  submoduleSetRecurse(args: { repoPath: string; value: boolean }): Promise<{ recurse: boolean }>
   worktreeList(repoPath: string): Promise<WorktreeInfoDto[]>
   worktreeAdd(args: {
     repoPath: string
@@ -299,6 +314,12 @@ const api: GitGuiApi = {
   repoSettingsGet: (repoPath) => ipcRenderer.invoke(IPC.repoSettingsGet, { repoPath }),
   repoSettingsSet: (args) => ipcRenderer.invoke(IPC.repoSettingsSet, args),
   repoCleanOrig: (repoPath) => ipcRenderer.invoke(IPC.repoCleanOrig, { repoPath }),
+  submoduleDetails: (repoPath) => ipcRenderer.invoke(IPC.submoduleDetails, { repoPath }),
+  submoduleInit: (args) => ipcRenderer.invoke(IPC.submoduleInit, args),
+  submoduleUpdate: (args) => ipcRenderer.invoke(IPC.submoduleUpdate, args),
+  submoduleSetUpdate: (args) => ipcRenderer.invoke(IPC.submoduleSetUpdate, args),
+  submoduleGetRecurse: (repoPath) => ipcRenderer.invoke(IPC.submoduleGetRecurse, { repoPath }),
+  submoduleSetRecurse: (args) => ipcRenderer.invoke(IPC.submoduleSetRecurse, args),
   worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),
   worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
   worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),

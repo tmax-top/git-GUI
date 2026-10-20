@@ -608,6 +608,30 @@ export const repoSettingsSetRequestSchema = opRepoSchema.extend({
   defaultBranch: z.string().min(1).max(255).optional()
 })
 
+/** One submodule: status + keep-up-to-date policy. */
+export interface SubmoduleDetailDto {
+  path: string
+  oid: string
+  /** '+' new commits, '-' not initialized, 'U' conflicts, ' ' up to date */
+  status: string
+  /** submodule.<path>.update; null = git default. */
+  update: 'checkout' | 'merge' | 'rebase' | 'none' | null
+}
+
+export const submodulePathRequestSchema = opRepoSchema.extend({
+  path: z.string().min(1).max(4096).optional(),
+  recursive: z.boolean().optional()
+})
+
+export const submoduleSetUpdateRequestSchema = opRepoSchema.extend({
+  path: z.string().min(1).max(4096),
+  strategy: z.enum(['checkout', 'merge', 'rebase', 'none']).nullable()
+})
+
+export const submoduleSetRecurseRequestSchema = opRepoSchema.extend({
+  value: z.boolean()
+})
+
 const undoDescriptionSchema = z.object({
   key: z.string().min(1).max(128),
   params: z.record(z.string(), z.union([z.string(), z.number()])).optional()

@@ -5,7 +5,8 @@ import type {
   HookDto,
   LfsStatusDto,
   RepoSettingsDto,
-  SigningStatusDto
+  SigningStatusDto,
+  SubmoduleDetailDto
 } from '@shared/ipc'
 import { useApp } from '../store'
 import { t, tf, type MessageKey } from '../i18n'
@@ -161,8 +162,158 @@ export function SettingsDialog(): React.JSX.Element {
         <SigningSection />
         <ExternalToolsSection />
         <RepoSettingsSection />
+        <SubmoduleSection />
       </div>
     </Modal>
+  )
+}
+
+function SubmoduleSection(): React.JSX.Element {
+  const repoPath = useApp((s) => s.repoPath)
+  const refreshAll = useApp((s) => s.refreshAll)
+  const [subs, setSubs] = useState<SubmoduleDetailDto[]>([])
+  const [recurse, setRecurse] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const reload = async (): Promise<void> => {
+    if (!repoPath) return
+    const [details, recurseState] = await Promise.all([
+      window.api.submoduleDetails(repoPath),
+      window.api.submoduleGetRecurse(repoPath)
+    ])
+    setSubs(details)
+    setRecurse(recurseState.recurse)
+  }
+
+  useEffect(() => {
+    if (!repoPath) return
+    let alive = true
+    void window.api
+      .submoduleDetails(repoPath)
+      .then(async (details) => {
+        const recurseState = await window.api.submoduleGetRecurse(repoPath)
+        if (!alive) return
+        setSubs(details)
+        setRecurse(recurseState.recurse)
+      })
+      .catch(() => setSubs([]))
+    return () => {
+      alive = false
+    }
+  }, [repoPath])
+
+  const run = async (fn: () => Promise<unknown>): Promise<void> => {
+    if (busy || !repoPath) return
+    setBusy(true)
+    setMsg(null)
+    try {
+      await fn()
+      await reload()
+      void refreshAll()
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : t('error.generic'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-sm font-semibold text-zinc-200">{t('submodule.title')}</div>
+      <div className="text-xs text-zinc-500">{t('submodule.hint')}</div>
+      {!repoPath && <div className="text-sm text-zinc-500">{t('submodule.noRepo')}</div>}
+      {repoPath && (
+        <>
+          {subs.length === 0 && <div className="text-sm text-zinc-500">{t('submodule.empty')}</div>}
+          {subs.map((s) => (
+            <div key={s.path} className="flex items-center gap-2 text-sm text-zinc-300">
+              <span className="w-40 truncate" title={s.path}>
+                {s.path}
+              </span>
+              <span
+                className="w-20 text-xs"
+                style={{ color: s.status === '+' ? '#f59e0b' : s.status === '-' ? '#f43f5e' : s.status === 'U' ? '#f43f5e' : '#10b981' }}
+              >
+                {s.status === '-'
+                  ? t('submodule.statusInit')
+                  : s.status === '+'
+                    ? t('submodule.statusNew')
+                    : s.status === 'U'
+                      ? t('submodule.statusConflict')
+                      : t('submodule.statusOk')}
+              </span>
+              <span className="font-mono text-xs text-zinc-600">{s.oid.slice(0, 7)}</span>
+              <label className="flex items-center gap-1 text-xs text-zinc-400">
+                <span>{t('submodule.policy')}</span>
+                <select
+                  className={`${inputClass()} w-36`}
+                  value={s.update ?? ''}
+                  disabled={busy}
+                  onChange={(e) => {
+                    const v = e.target.value === '' ? null : e.target.value
+                    void run(() =>
+                      window.api.submoduleSetUpdate({
+                        repoPath: repoPath as string,
+                        path: s.path,
+                        strategy: v as 'checkout' | 'merge' | 'rebase' | 'none' | null
+                      })
+                    )
+                  }}
+                >
+                  <option value="">{t('submodule.policyDefault')}</option>
+                  <option value="checkout">checkout</option>
+                  <option value="merge">merge</option>
+                  <option value="rebase">rebase</option>
+                  <option value="none">{t('submodule.policyNone')}</option>
+                </select>
+              </label>
+              {s.status === '-' && (
+                <button
+                  className={btnGhost()}
+                  disabled={busy}
+                  onClick={() =>
+                    void run(() =>
+                      window.api.submoduleInit({ repoPath: repoPath as string, path: s.path })
+                    )
+                  }
+                >
+                  {t('submodule.init')}
+                </button>
+              )}
+              <button
+                className={btnGhost()}
+                disabled={busy}
+                onClick={() =>
+                  void run(() =>
+                    window.api.submoduleUpdate({ repoPath: repoPath as string, path: s.path })
+                  )
+                }
+              >
+                {t('submodule.update')}
+              </button>
+            </div>
+          ))}
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              checked={recurse}
+              disabled={busy}
+              onChange={(e) =>
+                void run(() =>
+                  window.api.submoduleSetRecurse({
+                    repoPath: repoPath as string,
+                    value: e.target.checked
+                  })
+                )
+              }
+            />
+            <span>{t('submodule.recurse')}</span>
+          </label>
+          {msg && <div className="text-xs text-rose-400">{msg}</div>}
+        </>
+      )}
+    </div>
   )
 }
 
