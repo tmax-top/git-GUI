@@ -271,6 +271,16 @@ export const zh = {
   'hooks.close': '收起',
   'hooks.custom': '自定义',
 
+  'lfs.title': 'Git LFS',
+  'lfs.notInstalled': '未检测到 git lfs。安装后可在此查看状态与拉取策略。',
+  'lfs.noRepo': '打开一个仓库后可查看 LFS 状态。',
+  'lfs.notLfsRepo': '当前仓库未使用 LFS（.gitattributes 中无 filter=lfs）。',
+  'lfs.tracked': '已跟踪文件：{n}',
+  'lfs.fetchInclude': '拉取包含（glob，逗号分隔）',
+  'lfs.fetchExclude': '拉取排除（glob，逗号分隔）',
+  'lfs.policyHint': '控制 git fetch/pull 时下载哪些 LFS 对象，例如 *.psd,*.zip / *.max。留空即不限制。',
+  'lfs.save': '保存策略',
+
   'activity.title': '活动日志',
   'activity.empty': '暂无记录',
   'activity.kind.autoFetch': '自动拉取',
@@ -555,6 +565,16 @@ export const en = {
   'hooks.view': 'View',
   'hooks.close': 'Collapse',
   'hooks.custom': 'custom',
+
+  'lfs.title': 'Git LFS',
+  'lfs.notInstalled': 'git lfs was not found on PATH. Install it to manage LFS here.',
+  'lfs.noRepo': 'Open a repository to see its LFS status.',
+  'lfs.notLfsRepo': 'This repository does not use LFS (no filter=lfs in .gitattributes).',
+  'lfs.tracked': 'Tracked files: {n}',
+  'lfs.fetchInclude': 'Fetch include (comma-separated globs)',
+  'lfs.fetchExclude': 'Fetch exclude (comma-separated globs)',
+  'lfs.policyHint': 'Controls which LFS objects git fetch/pull downloads, e.g. *.psd,*.zip / *.max. Empty = no limit.',
+  'lfs.save': 'Save policy',
 
   'activity.title': 'Activity log',
   'activity.empty': 'No entries yet',

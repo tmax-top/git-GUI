@@ -62,6 +62,8 @@ export const IPC = {
   hooksList: 'hooks:list',
   hookRead: 'hooks:read',
   hookSetEnabled: 'hooks:setEnabled',
+  lfsStatus: 'lfs:status',
+  lfsSetPolicy: 'lfs:setPolicy',
   worktreeList: 'worktree:list',
   worktreeAdd: 'worktree:add',
   worktreeRemove: 'worktree:remove'

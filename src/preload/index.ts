@@ -10,6 +10,7 @@ import type {
   GraphPageDto,
   HookDto,
   Language,
+  LfsStatusDto,
   OpStateDto,
   ProgressEventDto,
   RefsDto,
@@ -165,6 +166,12 @@ export interface GitGuiApi {
   hooksList(repoPath: string): Promise<HookDto[]>
   hookRead(repoPath: string, name: string): Promise<string>
   hookSetEnabled(args: { repoPath: string; name: string; enabled: boolean }): Promise<HookDto[]>
+  lfsStatus(repoPath: string): Promise<LfsStatusDto>
+  lfsSetPolicy(args: {
+    repoPath: string
+    fetchInclude?: string
+    fetchExclude?: string
+  }): Promise<LfsStatusDto>
   worktreeList(repoPath: string): Promise<WorktreeInfoDto[]>
   worktreeAdd(args: {
     repoPath: string
@@ -247,6 +254,8 @@ const api: GitGuiApi = {
   hooksList: (repoPath) => ipcRenderer.invoke(IPC.hooksList, { repoPath }),
   hookRead: (repoPath, name) => ipcRenderer.invoke(IPC.hookRead, { repoPath, name }),
   hookSetEnabled: (args) => ipcRenderer.invoke(IPC.hookSetEnabled, args),
+  lfsStatus: (repoPath) => ipcRenderer.invoke(IPC.lfsStatus, { repoPath }),
+  lfsSetPolicy: (args) => ipcRenderer.invoke(IPC.lfsSetPolicy, args),
   worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),
   worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
   worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),

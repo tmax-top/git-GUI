@@ -263,6 +263,20 @@ export interface HookDto {
   custom: boolean
 }
 
+/** Git LFS state for one repo. */
+export interface LfsStatusDto {
+  /** `git lfs` is available on PATH. */
+  installed: boolean
+  /** The repo tracks at least one LFS object. */
+  isLfsRepo: boolean
+  /** Files reported by `git lfs ls-files` (0 when not installed). */
+  trackedFiles: number
+  /** `lfs.fetchinclude` glob filter. */
+  fetchInclude: string
+  /** `lfs.fetchexclude` glob filter. */
+  fetchExclude: string
+}
+
 /** i18n key (+ interpolation params) describing one undoable operation. */
 export interface UndoDescriptionDto {
   key: string
@@ -514,6 +528,13 @@ export const hookReadRequestSchema = opRepoSchema.extend({ name: hookNameSchema 
 export const hookSetEnabledRequestSchema = opRepoSchema.extend({
   name: hookNameSchema,
   enabled: z.boolean()
+})
+
+export const lfsStatusRequestSchema = opRepoSchema
+
+export const lfsSetPolicyRequestSchema = opRepoSchema.extend({
+  fetchInclude: z.string().max(1024).optional(),
+  fetchExclude: z.string().max(1024).optional()
 })
 
 const undoDescriptionSchema = z.object({

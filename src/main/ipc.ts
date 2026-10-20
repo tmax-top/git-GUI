@@ -52,7 +52,9 @@ import {
   worktreeRemoveRequestSchema,
   hooksListRequestSchema,
   hookReadRequestSchema,
-  hookSetEnabledRequestSchema
+  hookSetEnabledRequestSchema,
+  lfsStatusRequestSchema,
+  lfsSetPolicyRequestSchema
 } from '../shared/ipc'
 import type {
   ActivityEntryDto,
@@ -63,6 +65,7 @@ import type {
   GitStatusDto,
   GraphPageDto,
   HookDto,
+  LfsStatusDto,
   OpStateDto,
   ProgressEventDto,
   RebaseRangeCommitDto,
@@ -139,6 +142,7 @@ import { AutoFetchScheduler } from './autofetch'
 import { initActivityLog, listActivity, logActivity, setActivityListener } from './log/activity'
 import { notifyForSync, showDesktopNotification } from './notify'
 import { listHooks, readHook, setHookEnabled } from './git/hooks'
+import { lfsStatus, setLfsFetchPolicy } from './git/lfs'
 
 const abortControllers = new Map<string, AbortController>()
 const watcher = new RepoWatcher()
@@ -590,6 +594,19 @@ export function registerIpcHandlers(): void {
   handle(IPC.hookSetEnabled, hookSetEnabledRequestSchema, async (arg): Promise<HookDto[]> => {
     await setHookEnabled(arg.repoPath, arg.name, arg.enabled)
     return listHooks(arg.repoPath)
+  })
+
+  // --- LFS -----------------------------------------------------------------
+  handle(IPC.lfsStatus, lfsStatusRequestSchema, async (arg): Promise<LfsStatusDto> =>
+    lfsStatus(arg.repoPath)
+  )
+
+  handle(IPC.lfsSetPolicy, lfsSetPolicyRequestSchema, async (arg): Promise<LfsStatusDto> => {
+    await setLfsFetchPolicy(arg.repoPath, {
+      fetchInclude: arg.fetchInclude,
+      fetchExclude: arg.fetchExclude
+    })
+    return lfsStatus(arg.repoPath)
   })
 
   // --- watcher -------------------------------------------------------------

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { ActivityEntryDto, HookDto } from '@shared/ipc'
+import type { ActivityEntryDto, HookDto, LfsStatusDto } from '@shared/ipc'
 import { useApp } from '../store'
 import { t, tf, type MessageKey } from '../i18n'
 import { Modal, btnGhost, btnPrimary, inputClass } from '../components/Modal'
@@ -149,8 +149,87 @@ export function SettingsDialog(): React.JSX.Element {
 
         <ActivityLog />
         <HooksSection />
+        <LfsSection />
       </div>
     </Modal>
+  )
+}
+
+function LfsSection(): React.JSX.Element {
+  const repoPath = useApp((s) => s.repoPath)
+  const [status, setStatus] = useState<LfsStatusDto | null>(null)
+  const [fetchInclude, setFetchInclude] = useState('')
+  const [fetchExclude, setFetchExclude] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!repoPath) return
+    let alive = true
+    void window.api.lfsStatus(repoPath).then((s) => {
+      if (!alive) return
+      setStatus(s)
+      setFetchInclude(s.fetchInclude)
+      setFetchExclude(s.fetchExclude)
+    })
+    return () => {
+      alive = false
+    }
+  }, [repoPath])
+
+  const save = async (): Promise<void> => {
+    if (!repoPath || saving) return
+    setSaving(true)
+    try {
+      const s = await window.api.lfsSetPolicy({ repoPath, fetchInclude, fetchExclude })
+      setStatus(s)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-sm font-semibold text-zinc-200">{t('lfs.title')}</div>
+      {!repoPath && <div className="text-sm text-zinc-500">{t('lfs.noRepo')}</div>}
+      {repoPath && status && !status.installed && (
+        <div className="text-sm text-zinc-500">{t('lfs.notInstalled')}</div>
+      )}
+      {repoPath && status?.installed && (
+        <>
+          {status.isLfsRepo ? (
+            <div className="text-sm text-zinc-400">
+              {tf('lfs.tracked', { n: status.trackedFiles })}
+            </div>
+          ) : (
+            <div className="text-sm text-zinc-500">{t('lfs.notLfsRepo')}</div>
+          )}
+          <div className="text-xs text-zinc-500">{t('lfs.policyHint')}</div>
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <span className="w-40 shrink-0">{t('lfs.fetchInclude')}</span>
+            <input
+              className={inputClass()}
+              value={fetchInclude}
+              onChange={(e) => setFetchInclude(e.target.value)}
+              placeholder="*.psd,*.zip"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <span className="w-40 shrink-0">{t('lfs.fetchExclude')}</span>
+            <input
+              className={inputClass()}
+              value={fetchExclude}
+              onChange={(e) => setFetchExclude(e.target.value)}
+              placeholder="*.max"
+            />
+          </label>
+          <div>
+            <button className={btnPrimary()} disabled={saving} onClick={() => void save()}>
+              {t('lfs.save')}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
