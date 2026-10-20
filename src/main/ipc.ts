@@ -56,7 +56,8 @@ import {
   lfsStatusRequestSchema,
   lfsSetPolicyRequestSchema,
   gitflowStartRequestSchema,
-  gitflowFinishRequestSchema
+  gitflowFinishRequestSchema,
+  signingSetRequestSchema
 } from '../shared/ipc'
 import type {
   ActivityEntryDto,
@@ -75,6 +76,7 @@ import type {
   ConflictFileDto,
   RefsDto,
   RepoValidateDto,
+  SigningStatusDto,
   UndoApplyResultDto,
   UndoSnapshotDto,
   UndoStackStateDto,
@@ -147,6 +149,7 @@ import { notifyForSync, showDesktopNotification } from './notify'
 import { listHooks, readHook, setHookEnabled } from './git/hooks'
 import { lfsStatus, setLfsFetchPolicy } from './git/lfs'
 import { gitflowFinish, gitflowInit, gitflowStart, gitflowStatus } from './git/gitflow'
+import { setSigning, signingStatus } from './git/signing'
 
 const abortControllers = new Map<string, AbortController>()
 const watcher = new RepoWatcher()
@@ -631,6 +634,20 @@ export function registerIpcHandlers(): void {
   handle(IPC.gitflowFinish, gitflowFinishRequestSchema, async (arg): Promise<GitflowStatusDto> => {
     await gitflowFinish(arg.repoPath, arg.kind)
     return gitflowStatus(arg.repoPath)
+  })
+
+  // --- commit signing (repo-level config only) ------------------------------
+  handle(IPC.signingStatus, opRepoSchema, async (arg): Promise<SigningStatusDto> =>
+    signingStatus(arg.repoPath)
+  )
+
+  handle(IPC.signingSet, signingSetRequestSchema, async (arg): Promise<SigningStatusDto> => {
+    await setSigning(arg.repoPath, {
+      signCommits: arg.signCommits,
+      format: arg.format,
+      signingKey: arg.signingKey
+    })
+    return signingStatus(arg.repoPath)
   })
 
   // --- watcher -------------------------------------------------------------

@@ -22,6 +22,7 @@ import type {
   SearchContentHitDto,
   SearchScope,
   SessionStateDto,
+  SigningStatusDto,
   UndoApplyResultDto,
   UndoDescriptionDto,
   UndoSnapshotDto,
@@ -184,6 +185,13 @@ export interface GitGuiApi {
     repoPath: string
     kind: 'feature' | 'release' | 'hotfix'
   }): Promise<GitflowStatusDto>
+  signingStatus(repoPath: string): Promise<SigningStatusDto>
+  signingSet(args: {
+    repoPath: string
+    signCommits?: boolean
+    format?: 'openpgp' | 'ssh' | 'x509'
+    signingKey?: string
+  }): Promise<SigningStatusDto>
   worktreeList(repoPath: string): Promise<WorktreeInfoDto[]>
   worktreeAdd(args: {
     repoPath: string
@@ -272,6 +280,8 @@ const api: GitGuiApi = {
   gitflowInit: (repoPath) => ipcRenderer.invoke(IPC.gitflowInit, { repoPath }),
   gitflowStart: (args) => ipcRenderer.invoke(IPC.gitflowStart, args),
   gitflowFinish: (args) => ipcRenderer.invoke(IPC.gitflowFinish, args),
+  signingStatus: (repoPath) => ipcRenderer.invoke(IPC.signingStatus, { repoPath }),
+  signingSet: (args) => ipcRenderer.invoke(IPC.signingSet, args),
   worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),
   worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
   worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),

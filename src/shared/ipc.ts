@@ -286,6 +286,17 @@ export interface GitflowStatusDto {
   currentKind?: 'feature' | 'release' | 'hotfix'
 }
 
+/** Commit-signing state for one repo (repo-level git config only). */
+export interface SigningStatusDto {
+  signCommits: boolean
+  /** git gpg.format; empty = git default (openpgp). */
+  format: 'openpgp' | 'ssh' | 'x509' | ''
+  signingKey: string
+  gpgInstalled: boolean
+  sshAvailable: boolean
+  sshPublicKeys: { path: string; comment: string }[]
+}
+
 /** i18n key (+ interpolation params) describing one undoable operation. */
 export interface UndoDescriptionDto {
   key: string
@@ -558,6 +569,13 @@ export const gitflowStartRequestSchema = opRepoSchema.extend({
 })
 
 export const gitflowFinishRequestSchema = opRepoSchema.extend({ kind: gitflowKindSchema })
+
+export const signingSetRequestSchema = opRepoSchema.extend({
+  signCommits: z.boolean().optional(),
+  format: z.enum(['openpgp', 'ssh', 'x509']).optional(),
+  /** Empty string unsets user.signingkey. */
+  signingKey: z.string().max(4096).optional()
+})
 
 const undoDescriptionSchema = z.object({
   key: z.string().min(1).max(128),

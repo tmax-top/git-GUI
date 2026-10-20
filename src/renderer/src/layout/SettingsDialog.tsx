@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
-import type { ActivityEntryDto, GitflowStatusDto, HookDto, LfsStatusDto } from '@shared/ipc'
+import type {
+  ActivityEntryDto,
+  GitflowStatusDto,
+  HookDto,
+  LfsStatusDto,
+  SigningStatusDto
+} from '@shared/ipc'
 import { useApp } from '../store'
 import { t, tf, type MessageKey } from '../i18n'
 import { Modal, btnGhost, btnPrimary, inputClass } from '../components/Modal'
@@ -151,8 +157,117 @@ export function SettingsDialog(): React.JSX.Element {
         <HooksSection />
         <LfsSection />
         <GitflowSection />
+        <SigningSection />
       </div>
     </Modal>
+  )
+}
+
+function SigningSection(): React.JSX.Element {
+  const repoPath = useApp((s) => s.repoPath)
+  const [status, setStatus] = useState<SigningStatusDto | null>(null)
+  const [sign, setSign] = useState(false)
+  const [format, setFormat] = useState<'openpgp' | 'ssh' | 'x509'>('ssh')
+  const [key, setKey] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!repoPath) return
+    let alive = true
+    void window.api.signingStatus(repoPath).then((s) => {
+      if (!alive) return
+      setStatus(s)
+      setSign(s.signCommits)
+      setFormat(s.format === 'openpgp' || s.format === 'x509' ? s.format : 'ssh')
+      setKey(s.signingKey)
+    })
+    return () => {
+      alive = false
+    }
+  }, [repoPath])
+
+  const save = async (): Promise<void> => {
+    if (!repoPath || saving) return
+    setSaving(true)
+    try {
+      setStatus(await window.api.signingSet({ repoPath, signCommits: sign, format, signingKey: key }))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-sm font-semibold text-zinc-200">{t('signing.title')}</div>
+      <div className="text-xs text-zinc-500">{t('signing.hint')}</div>
+      {!repoPath && <div className="text-sm text-zinc-500">{t('signing.noRepo')}</div>}
+      {repoPath && status && (
+        <>
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              checked={sign}
+              onChange={(e) => setSign(e.target.checked)}
+            />
+            <span>{t('signing.enable')}</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <span className="w-28 shrink-0">{t('signing.format')}</span>
+            <select
+              className={`${inputClass()} w-40`}
+              value={format}
+              onChange={(e) => setFormat(e.target.value as 'openpgp' | 'ssh' | 'x509')}
+            >
+              <option value="openpgp" disabled={!status.gpgInstalled}>
+                {t('signing.formatOpenpgp')}
+              </option>
+              <option value="ssh" disabled={!status.sshAvailable}>
+                {t('signing.formatSsh')}
+              </option>
+              <option value="x509">{t('signing.formatX509')}</option>
+            </select>
+          </label>
+          {format === 'openpgp' && !status.gpgInstalled && (
+            <div className="text-xs text-amber-500">{t('signing.noGpg')}</div>
+          )}
+          {format === 'ssh' && !status.sshAvailable && (
+            <div className="text-xs text-amber-500">{t('signing.noSsh')}</div>
+          )}
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <span className="w-28 shrink-0">{t('signing.key')}</span>
+            <input
+              className={inputClass()}
+              value={key}
+              placeholder={t('signing.keyPlaceholder')}
+              onChange={(e) => setKey(e.target.value)}
+            />
+          </label>
+          {format === 'ssh' && status.sshAvailable && (
+            <div className="flex flex-wrap items-center gap-2 pl-28">
+              {status.sshPublicKeys.length === 0 && (
+                <span className="text-xs text-zinc-500">{t('signing.noSshKeys')}</span>
+              )}
+              {status.sshPublicKeys.map((k) => (
+                <button
+                  key={k.path}
+                  className={btnGhost()}
+                  onClick={() => setKey(k.path)}
+                  title={k.path}
+                >
+                  {k.path.split('/').pop()}
+                  {k.comment ? ` (${k.comment})` : ''}
+                </button>
+              ))}
+            </div>
+          )}
+          <div>
+            <button className={btnPrimary()} disabled={saving} onClick={() => void save()}>
+              {t('signing.save')}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
