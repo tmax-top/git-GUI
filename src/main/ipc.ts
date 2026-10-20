@@ -133,16 +133,35 @@ import { loadSession, loadSettings, updateSession, updateSettings } from './sett
 import { RepoWatcher } from './watcher'
 import { AutoFetchScheduler } from './autofetch'
 import { initActivityLog, listActivity, logActivity, setActivityListener } from './log/activity'
+import { notifyForSync, showDesktopNotification } from './notify'
 
 const abortControllers = new Map<string, AbortController>()
 const watcher = new RepoWatcher()
+
+/** Fire a desktop notification for a sync outcome if settings allow it. */
+async function notifyForOutcome(
+  kind: ActivityEntryDto['kind'],
+  ok: boolean,
+  message?: string
+): Promise<void> {
+  const settings = await loadSettings()
+  if (!settings.notifications) return
+  const lang =
+    settings.language === 'system' ? (app.getLocale().startsWith('zh') ? 'zh' : 'en') : settings.language
+  const n = notifyForSync(lang, kind, ok, message)
+  if (n) showDesktopNotification(n)
+}
+
 const autoFetch = new AutoFetchScheduler({
   loadSettings,
   loadSession,
   fetch: (repoPath, opts) => fetch(repoPath, { prune: opts.prune }),
   onChanged: broadcastRepoChanged,
   // Don't compete with a manual sync op (fetch/pull/push/clone in flight).
-  shouldSkip: () => abortControllers.size > 0
+  shouldSkip: () => abortControllers.size > 0,
+  onOutcome: (_repoPath, ok, message) => {
+    void notifyForOutcome('auto-fetch', ok, message)
+  }
 })
 
 function handle<S extends z.ZodTypeAny, R>(
@@ -355,7 +374,7 @@ export function registerIpcHandlers(): void {
   })
 
   // --- sync (fetch/pull/push) with progress + cancel ------------------------
-  /** Run a sync op and record its outcome in the activity log. */
+  /** Run a sync op and record its outcome in the activity log + notifications. */
   async function withActivity(
     kind: ActivityEntryDto['kind'],
     repoPath: string,
@@ -364,9 +383,11 @@ export function registerIpcHandlers(): void {
     try {
       await fn()
       await logActivity({ kind, repoPath, ok: true })
+      await notifyForOutcome(kind, true)
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       await logActivity({ kind, repoPath, ok: false, message })
+      await notifyForOutcome(kind, false, message)
       throw e
     }
   }

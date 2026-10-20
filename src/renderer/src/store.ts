@@ -362,7 +362,8 @@ export const useApp = create<AppState>((set, get) => {
       graphDateWidth: 48,
       graphOidWidth: 40,
       autoFetchInterval: 0,
-      autoPrune: true
+      autoPrune: true,
+      notifications: true
     },
 
     async boot(): Promise<void> {

@@ -18,6 +18,8 @@ export interface AutoFetchDeps {
   onChanged: (repoPath: string) => void
   /** Skip this tick (e.g. a manual sync op is in flight). */
   shouldSkip?: () => boolean
+  /** Outcome observer (desktop notification); runs after the activity log. */
+  onOutcome?: (repoPath: string, ok: boolean, message?: string) => void
   now?: () => number
 }
 
@@ -69,13 +71,16 @@ export class AutoFetchScheduler {
           await this.deps.fetch(repoPath, { prune: settings.autoPrune })
           await logActivity({ kind: 'auto-fetch', repoPath, ok: true })
           this.deps.onChanged(repoPath)
+          this.deps.onOutcome?.(repoPath, true)
         } catch (e) {
+          const message = e instanceof Error ? e.message : String(e)
           await logActivity({
             kind: 'auto-fetch',
             repoPath,
             ok: false,
-            message: e instanceof Error ? e.message : String(e)
+            message
           })
+          this.deps.onOutcome?.(repoPath, false, message)
         }
       }
     } finally {

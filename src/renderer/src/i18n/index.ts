@@ -258,6 +258,8 @@ export const zh = {
   'settings.autoFetchMinutes': '{n} 分钟',
   'settings.autoFetchHint': '后台按间隔对已打开的仓库执行 git fetch。',
   'settings.autoPrune': '自动清理失效的远程分支（--prune）',
+  'settings.notifications': '桌面通知',
+  'settings.notificationsHint': '推送完成、合并冲突、获取远端失败时发送系统通知。',
 
   'activity.title': '活动日志',
   'activity.empty': '暂无记录',
@@ -531,6 +533,8 @@ export const en = {
   'settings.autoFetchMinutes': '{n} min',
   'settings.autoFetchHint': 'Runs git fetch on open repositories in the background at this interval.',
   'settings.autoPrune': 'Prune stale remote-tracking branches (--prune)',
+  'settings.notifications': 'Desktop notifications',
+  'settings.notificationsHint': 'Notify on push completion, merge conflicts, and fetch failures.',
 
   'activity.title': 'Activity log',
   'activity.empty': 'No entries yet',

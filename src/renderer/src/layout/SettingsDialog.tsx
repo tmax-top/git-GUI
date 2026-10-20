@@ -74,6 +74,7 @@ export function SettingsDialog(): React.JSX.Element {
   const updateSettings = useApp((s) => s.updateSettings)
   const [interval, setIntervalValue] = useState(settings.autoFetchInterval)
   const [prune, setPrune] = useState(settings.autoPrune)
+  const [notifications, setNotifications] = useState(settings.notifications)
   const [saving, setSaving] = useState(false)
 
   // NOTE: mounted by AppShell only while open, so the initial useState read
@@ -82,7 +83,11 @@ export function SettingsDialog(): React.JSX.Element {
   const save = async (): Promise<void> => {
     setSaving(true)
     try {
-      await updateSettings({ autoFetchInterval: interval, autoPrune: prune })
+      await updateSettings({
+        autoFetchInterval: interval,
+        autoPrune: prune,
+        notifications
+      })
       close()
     } finally {
       setSaving(false)
@@ -126,6 +131,19 @@ export function SettingsDialog(): React.JSX.Element {
               onChange={(e) => setPrune(e.target.checked)}
             />
             <span>{t('settings.autoPrune')}</span>
+          </label>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <div className="text-sm font-semibold text-zinc-200">{t('settings.notifications')}</div>
+          <div className="text-xs text-zinc-500">{t('settings.notificationsHint')}</div>
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              checked={notifications}
+              onChange={(e) => setNotifications(e.target.checked)}
+            />
+            <span>{t('settings.notifications')}</span>
           </label>
         </div>
 

@@ -112,6 +112,8 @@ export interface AppSettingsDto {
   autoFetchInterval: number
   /** Auto-fetch passes `--prune` to drop stale remote-tracking refs. */
   autoPrune: boolean
+  /** Desktop notifications for push completion / conflicts / fetch failures. */
+  notifications: boolean
 }
 
 export interface SessionStateDto {
@@ -550,7 +552,8 @@ export const settingsPatchSchema = z.object({
   graphDateWidth: z.number().int().min(40).max(200).optional(),
   graphOidWidth: z.number().int().min(40).max(160).optional(),
   autoFetchInterval: z.number().int().min(0).max(60).optional(),
-  autoPrune: z.boolean().optional()
+  autoPrune: z.boolean().optional(),
+  notifications: z.boolean().optional()
 })
 
 /** Read back recent activity-log entries (newest first). */

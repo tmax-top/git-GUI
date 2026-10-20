@@ -23,6 +23,8 @@ export interface AppSettings {
   autoFetchInterval: number
   /** Pass `--prune` on auto-fetch to drop stale remote-tracking refs. */
   autoPrune: boolean
+  /** Desktop notifications for push completion / conflicts / fetch failures. */
+  notifications: boolean
 }
 
 export interface SessionState {
@@ -43,7 +45,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   graphDateWidth: 48,
   graphOidWidth: 40,
   autoFetchInterval: 0,
-  autoPrune: true
+  autoPrune: true,
+  notifications: true
 }
 
 const DEFAULT_SESSION: SessionState = {
