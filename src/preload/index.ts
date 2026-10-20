@@ -8,6 +8,7 @@ import type {
   ConflictFileDto,
   GitStatusDto,
   GraphPageDto,
+  HookDto,
   Language,
   OpStateDto,
   ProgressEventDto,
@@ -161,6 +162,9 @@ export interface GitGuiApi {
     force?: boolean
   }): Promise<UndoApplyResultDto>
   activityList(limit?: number): Promise<ActivityEntryDto[]>
+  hooksList(repoPath: string): Promise<HookDto[]>
+  hookRead(repoPath: string, name: string): Promise<string>
+  hookSetEnabled(args: { repoPath: string; name: string; enabled: boolean }): Promise<HookDto[]>
   worktreeList(repoPath: string): Promise<WorktreeInfoDto[]>
   worktreeAdd(args: {
     repoPath: string
@@ -240,6 +244,9 @@ const api: GitGuiApi = {
   gitUndoList: (repoPath) => ipcRenderer.invoke(IPC.gitUndoList, { repoPath }),
   gitUndoApply: (args) => ipcRenderer.invoke(IPC.gitUndoApply, args),
   activityList: (limit) => ipcRenderer.invoke(IPC.activityList, limit ? { limit } : {}),
+  hooksList: (repoPath) => ipcRenderer.invoke(IPC.hooksList, { repoPath }),
+  hookRead: (repoPath, name) => ipcRenderer.invoke(IPC.hookRead, { repoPath, name }),
+  hookSetEnabled: (args) => ipcRenderer.invoke(IPC.hookSetEnabled, args),
   worktreeList: (repoPath) => ipcRenderer.invoke(IPC.worktreeList, { repoPath }),
   worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
   worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),

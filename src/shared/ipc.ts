@@ -250,6 +250,19 @@ export interface WorktreeInfoDto {
   prunable?: boolean
 }
 
+/** One entry in the hooks manager (standard or user-authored). */
+export interface HookDto {
+  name: string
+  /** Hook file exists in .git/hooks. */
+  exists: boolean
+  /** Exists and is executable — git only runs executable hooks. */
+  enabled: boolean
+  /** git ships a `.sample` for this hook. */
+  sampleExists: boolean
+  /** Not one of the standard git hook names. */
+  custom: boolean
+}
+
 /** i18n key (+ interpolation params) describing one undoable operation. */
 export interface UndoDescriptionDto {
   key: string
@@ -490,6 +503,17 @@ export const worktreeRemoveRequestSchema = z.object({
   repoPath: repoPathSchema,
   path: z.string().min(1).max(4096),
   force: z.boolean().optional()
+})
+
+const hookNameSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/)
+
+export const hooksListRequestSchema = opRepoSchema
+
+export const hookReadRequestSchema = opRepoSchema.extend({ name: hookNameSchema })
+
+export const hookSetEnabledRequestSchema = opRepoSchema.extend({
+  name: hookNameSchema,
+  enabled: z.boolean()
 })
 
 const undoDescriptionSchema = z.object({

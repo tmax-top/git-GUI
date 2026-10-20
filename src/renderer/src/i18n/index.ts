@@ -261,6 +261,16 @@ export const zh = {
   'settings.notifications': '桌面通知',
   'settings.notificationsHint': '推送完成、合并冲突、获取远端失败时发送系统通知。',
 
+  'hooks.title': 'Hooks',
+  'hooks.hint': 'git 仅执行可执行的 hook。禁用即去掉可执行位，不会删除文件。',
+  'hooks.noRepo': '打开一个仓库后可管理其 hooks。',
+  'hooks.empty': '无 hook 文件（可从 .sample 复制创建）',
+  'hooks.enable': '启用',
+  'hooks.disable': '禁用',
+  'hooks.view': '查看',
+  'hooks.close': '收起',
+  'hooks.custom': '自定义',
+
   'activity.title': '活动日志',
   'activity.empty': '暂无记录',
   'activity.kind.autoFetch': '自动拉取',
@@ -535,6 +545,16 @@ export const en = {
   'settings.autoPrune': 'Prune stale remote-tracking branches (--prune)',
   'settings.notifications': 'Desktop notifications',
   'settings.notificationsHint': 'Notify on push completion, merge conflicts, and fetch failures.',
+
+  'hooks.title': 'Hooks',
+  'hooks.hint': 'git only runs executable hooks. Disabling clears the execute bit — the file is kept.',
+  'hooks.noRepo': 'Open a repository to manage its hooks.',
+  'hooks.empty': 'No hook file (copy from the .sample to create one)',
+  'hooks.enable': 'Enable',
+  'hooks.disable': 'Disable',
+  'hooks.view': 'View',
+  'hooks.close': 'Collapse',
+  'hooks.custom': 'custom',
 
   'activity.title': 'Activity log',
   'activity.empty': 'No entries yet',

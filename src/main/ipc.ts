@@ -49,7 +49,10 @@ import {
   watchRequestSchema,
   worktreeAddRequestSchema,
   worktreeFileSchema,
-  worktreeRemoveRequestSchema
+  worktreeRemoveRequestSchema,
+  hooksListRequestSchema,
+  hookReadRequestSchema,
+  hookSetEnabledRequestSchema
 } from '../shared/ipc'
 import type {
   ActivityEntryDto,
@@ -59,6 +62,7 @@ import type {
   ConflictsDto,
   GitStatusDto,
   GraphPageDto,
+  HookDto,
   OpStateDto,
   ProgressEventDto,
   RebaseRangeCommitDto,
@@ -134,6 +138,7 @@ import { RepoWatcher } from './watcher'
 import { AutoFetchScheduler } from './autofetch'
 import { initActivityLog, listActivity, logActivity, setActivityListener } from './log/activity'
 import { notifyForSync, showDesktopNotification } from './notify'
+import { listHooks, readHook, setHookEnabled } from './git/hooks'
 
 const abortControllers = new Map<string, AbortController>()
 const watcher = new RepoWatcher()
@@ -571,6 +576,20 @@ export function registerIpcHandlers(): void {
 
   handle(IPC.worktreeRemove, worktreeRemoveRequestSchema, async (arg) => {
     await removeWorktree(arg.repoPath, arg.path, arg.force)
+  })
+
+  // --- hooks ---------------------------------------------------------------
+  handle(IPC.hooksList, hooksListRequestSchema, async (arg): Promise<HookDto[]> =>
+    listHooks(arg.repoPath)
+  )
+
+  handle(IPC.hookRead, hookReadRequestSchema, async (arg): Promise<string> =>
+    readHook(arg.repoPath, arg.name)
+  )
+
+  handle(IPC.hookSetEnabled, hookSetEnabledRequestSchema, async (arg): Promise<HookDto[]> => {
+    await setHookEnabled(arg.repoPath, arg.name, arg.enabled)
+    return listHooks(arg.repoPath)
   })
 
   // --- watcher -------------------------------------------------------------

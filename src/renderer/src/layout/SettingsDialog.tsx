@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import type { ActivityEntryDto } from '@shared/ipc'
+import type { ActivityEntryDto, HookDto } from '@shared/ipc'
 import { useApp } from '../store'
 import { t, tf, type MessageKey } from '../i18n'
-import { Modal, btnPrimary, inputClass } from '../components/Modal'
+import { Modal, btnGhost, btnPrimary, inputClass } from '../components/Modal'
 
 const INTERVALS = [0, 1, 5, 10, 15, 30, 60] as const
 
@@ -148,7 +148,93 @@ export function SettingsDialog(): React.JSX.Element {
         </div>
 
         <ActivityLog />
+        <HooksSection />
       </div>
     </Modal>
+  )
+}
+
+function HooksSection(): React.JSX.Element {
+  const repoPath = useApp((s) => s.repoPath)
+  const [hooks, setHooks] = useState<HookDto[]>([])
+  const [openHook, setOpenHook] = useState<string | null>(null)
+  const [hookSource, setHookSource] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!repoPath) return
+    let alive = true
+    void window.api.hooksList(repoPath).then((list) => {
+      if (alive) setHooks(list)
+    })
+    return () => {
+      alive = false
+    }
+  }, [repoPath])
+
+  const toggle = async (hook: HookDto): Promise<void> => {
+    if (!repoPath || busy) return
+    setBusy(true)
+    try {
+      setHooks(await window.api.hookSetEnabled({ repoPath, name: hook.name, enabled: !hook.enabled }))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const view = async (hook: HookDto): Promise<void> => {
+    if (!repoPath) return
+    if (openHook === hook.name) {
+      setOpenHook(null)
+      return
+    }
+    setHookSource(await window.api.hookRead(repoPath, hook.name))
+    setOpenHook(hook.name)
+  }
+
+  // Only show hooks that exist or have a sample to copy from — the rest of
+  // the standard list is noise.
+  const rows = hooks.filter((h) => h.exists || h.sampleExists)
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-sm font-semibold text-zinc-200">{t('hooks.title')}</div>
+      <div className="text-xs text-zinc-500">{t('hooks.hint')}</div>
+      {!repoPath && <div className="text-sm text-zinc-500">{t('hooks.noRepo')}</div>}
+      {repoPath && rows.length === 0 && (
+        <div className="text-sm text-zinc-500">{t('hooks.empty')}</div>
+      )}
+      <div className="flex max-h-72 flex-col gap-1 overflow-auto">
+        {rows.map((h) => (
+          <div key={h.name} className="rounded bg-zinc-950 px-2 py-1">
+            <div className="flex items-center gap-2 font-mono text-xs">
+              <span className={h.enabled ? 'text-emerald-400' : 'text-zinc-500'}>
+                {h.enabled ? '●' : '○'}
+              </span>
+              <span className="text-zinc-200">{h.name}</span>
+              {h.custom && <span className="text-zinc-600">{t('hooks.custom')}</span>}
+              <span className="flex-1" />
+              {h.exists ? (
+                <button className={btnGhost()} disabled={busy} onClick={() => void toggle(h)}>
+                  {h.enabled ? t('hooks.disable') : t('hooks.enable')}
+                </button>
+              ) : (
+                <span className="text-zinc-600">{t('hooks.empty')}</span>
+              )}
+              {h.exists && (
+                <button className={btnGhost()} onClick={() => void view(h)}>
+                  {openHook === h.name ? t('hooks.close') : t('hooks.view')}
+                </button>
+              )}
+            </div>
+            {openHook === h.name && (
+              <pre className="mt-1 max-h-40 overflow-auto rounded bg-zinc-900 p-2 text-[11px] text-zinc-300">
+                {hookSource || ' '}
+              </pre>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }

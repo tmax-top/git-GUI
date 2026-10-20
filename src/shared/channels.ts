@@ -59,6 +59,9 @@ export const IPC = {
   gitUndoList: 'git:undoList',
   gitUndoApply: 'git:undoApply',
   activityList: 'activity:list',
+  hooksList: 'hooks:list',
+  hookRead: 'hooks:read',
+  hookSetEnabled: 'hooks:setEnabled',
   worktreeList: 'worktree:list',
   worktreeAdd: 'worktree:add',
   worktreeRemove: 'worktree:remove'
