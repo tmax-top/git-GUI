@@ -114,6 +114,32 @@ export function SettingsDialog(): React.JSX.Element {
     >
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
+          <div className="text-sm font-semibold text-zinc-200">{t('settings.theme')}</div>
+          <div className="flex gap-2">
+            {(['system', 'dark', 'light'] as const).map((mode) => (
+              <button
+                key={mode}
+                className={`flex-1 rounded px-3 py-1.5 text-xs font-medium transition ${
+                  settings.theme === mode
+                    ? 'bg-zinc-700 text-zinc-100 shadow'
+                    : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                }`}
+                onClick={() => void updateSettings({ theme: mode })}
+                data-testid={`theme-${mode}`}
+              >
+                {t(
+                  mode === 'system'
+                    ? 'settings.themeSystem'
+                    : mode === 'dark'
+                      ? 'settings.themeDark'
+                      : 'settings.themeLight'
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
           <div className="text-sm font-semibold text-zinc-200">{t('settings.autoFetch')}</div>
           <div className="text-xs text-zinc-500">{t('settings.autoFetchHint')}</div>
           <label className="flex items-center gap-2 text-sm text-zinc-300">

@@ -27,6 +27,7 @@ import type {
 } from '@shared/ipc'
 import { isUntracked, stagedFiles, untrackedFiles } from '@shared/status'
 import { setLocale, t, tf, type Locale, type MessageKey } from './i18n'
+import { applyTheme } from './theme'
 import type { ContextMenuEntry } from './components/ContextMenu'
 
 export type Selection =
@@ -422,6 +423,7 @@ export const useApp = create<AppState>((set, get) => {
       graphInitialLimit: 500,
       defaultBranch: 'main',
       language: 'system',
+      theme: 'system',
       leftPanelWidth: 224,
       rightPanelWidth: 320,
       graphSplitPct: 55,
@@ -455,6 +457,12 @@ export const useApp = create<AppState>((set, get) => {
             : 'en'
           : settings.language
       setLocale(lang)
+      applyTheme(settings.theme ?? 'system')
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+          if (get().settings.theme === 'system') applyTheme('system')
+        })
+      }
       set({ settings })
 
       if (!eventSubscribed) {
@@ -1349,6 +1357,9 @@ export const useApp = create<AppState>((set, get) => {
         set({ settings })
         if (patch.language) {
           setLocale(patch.language === 'system' ? (navigator.language.startsWith('zh') ? 'zh' : 'en') : patch.language)
+        }
+        if (patch.theme) {
+          applyTheme(patch.theme)
         }
       } catch (e) {
         set({ error: errText(e) })

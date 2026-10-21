@@ -179,6 +179,14 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
         EN
       </button>
       <button
+        className={`rounded px-2 py-1 ${settings.theme === 'dark' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:bg-zinc-800'}`}
+        onClick={() => void updateSettings({ theme: settings.theme === 'dark' ? 'light' : 'dark' })}
+        title={t('settings.theme')}
+        data-testid="toolbar-theme-toggle"
+      >
+        {settings.theme === 'dark' ? '🌙' : '☀️'}
+      </button>
+      <button
         className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
         onClick={() => openSettings()}
         title={t('toolbar.settings')}

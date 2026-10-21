@@ -14,6 +14,7 @@ export interface AppSettings {
   graphInitialLimit: number
   defaultBranch: string
   language: 'system' | 'zh' | 'en'
+  theme: 'system' | 'dark' | 'light'
   leftPanelWidth: number
   rightPanelWidth: number
   graphSplitPct: number
@@ -62,6 +63,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   graphInitialLimit: 500,
   defaultBranch: 'main',
   language: 'system',
+  theme: 'system',
   leftPanelWidth: 224,
   rightPanelWidth: 320,
   graphSplitPct: 55,

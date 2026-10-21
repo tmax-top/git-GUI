@@ -96,7 +96,7 @@ export interface AppSettingsDto {
   graphInitialLimit: number
   defaultBranch: string
   language: 'system' | 'zh' | 'en'
-  /** Left sidebar width in px. */
+  theme: 'system' | 'dark' | 'light'
   leftPanelWidth: number
   /** Right commit panel width in px. */
   rightPanelWidth: number
@@ -735,6 +735,7 @@ export const settingsPatchSchema = z.object({
   graphInitialLimit: z.number().int().min(50).max(20_000).optional(),
   defaultBranch: z.string().min(1).max(255).optional(),
   language: z.enum(['system', 'zh', 'en']).optional(),
+  theme: z.enum(['system', 'dark', 'light']).optional(),
   leftPanelWidth: z.number().int().min(160).max(600).optional(),
   rightPanelWidth: z.number().int().min(220).max(700).optional(),
   graphSplitPct: z.number().min(15).max(85).optional(),

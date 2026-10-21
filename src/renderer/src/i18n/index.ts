@@ -252,6 +252,10 @@ export const zh = {
   'toolbar.settings': '设置',
 
   'settings.title': '设置',
+  'settings.theme': '外观主题',
+  'settings.themeSystem': '跟随系统',
+  'settings.themeDark': '深色模式',
+  'settings.themeLight': '浅色护眼',
   'settings.autoFetch': '自动拉取（Auto-Fetch）',
   'settings.autoFetchInterval': '拉取间隔',
   'settings.autoFetchOff': '关闭',
@@ -702,6 +706,10 @@ export const en = {
   'toolbar.settings': 'Settings',
 
   'settings.title': 'Settings',
+  'settings.theme': 'Theme',
+  'settings.themeSystem': 'System',
+  'settings.themeDark': 'Dark',
+  'settings.themeLight': 'Light (Eye-care)',
   'settings.autoFetch': 'Auto-fetch',
   'settings.autoFetchInterval': 'Fetch interval',
   'settings.autoFetchOff': 'Off',

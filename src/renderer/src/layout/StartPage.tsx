@@ -67,6 +67,14 @@ export function StartPage(): React.JSX.Element {
         >
           EN
         </button>
+        <button
+          className={`rounded px-2 py-1 text-xs ${settings.theme === 'dark' ? 'bg-zinc-700 text-white' : 'bg-zinc-800 text-zinc-400'}`}
+          onClick={() => void updateSettings({ theme: settings.theme === 'dark' ? 'light' : 'dark' })}
+          title={t('settings.theme')}
+          data-testid="start-theme-toggle"
+        >
+          {settings.theme === 'dark' ? '🌙' : '☀️'}
+        </button>
       </div>
 
       <div className="text-center">
