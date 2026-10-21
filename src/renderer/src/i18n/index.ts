@@ -459,6 +459,17 @@ export const zh = {
   'shortcuts.category.git': 'Git 操作',
   'shortcuts.category.rebase': '交互式变基',
 
+  'patch.title': '补丁管理 (Patch)',
+  'patch.export': '导出 Patch',
+  'patch.exportCommit': '导出当前提交为 Patch',
+  'patch.exportWip': '导出工作区更改为 Patch',
+  'patch.apply': '应用 Patch',
+  'patch.applyModalTitle': '导入并应用补丁 (Apply Patch)',
+  'patch.pickFile': '选择 Patch 文件 (.patch / .diff)',
+  'patch.pasteText': '或在此直接粘贴补丁内容',
+  'patch.success': '补丁应用成功',
+  'patch.exportSuccess': '已导出 Patch 到: {path}',
+
   'error.notRepo': '不是 git 仓库',
   'error.generic': '操作失败'
 }
@@ -923,6 +934,17 @@ export const en = {
   'shortcuts.category.navigation': 'Navigation & Panels',
   'shortcuts.category.git': 'Git Operations',
   'shortcuts.category.rebase': 'Interactive Rebase',
+
+  'patch.title': 'Patch Management',
+  'patch.export': 'Export Patch',
+  'patch.exportCommit': 'Export commit as patch',
+  'patch.exportWip': 'Export working changes as patch',
+  'patch.apply': 'Apply Patch',
+  'patch.applyModalTitle': 'Apply Patch',
+  'patch.pickFile': 'Choose patch file (.patch / .diff)',
+  'patch.pasteText': 'Or paste patch content here',
+  'patch.success': 'Patch applied successfully',
+  'patch.exportSuccess': 'Patch exported to: {path}',
 
   'error.notRepo': 'Not a git repository',
   'error.generic': 'Operation failed'

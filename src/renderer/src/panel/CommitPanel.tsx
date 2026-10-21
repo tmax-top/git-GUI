@@ -151,6 +151,8 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
   const selectWip = useApp((s) => s.selectWip)
   const selectCommit = useApp((s) => s.selectCommit)
   const doCommit = useApp((s) => s.doCommit)
+  const exportPatch = useApp((s) => s.exportPatch)
+  const openPatchModal = useApp((s) => s.openPatchModal)
 
   const [message, setMessage] = useState('')
   const [amend, setAmend] = useState(false)
@@ -205,6 +207,16 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
               {commit.body && (
                 <pre className="mt-2 whitespace-pre-wrap text-xs text-zinc-500">{commit.body}</pre>
               )}
+              <div className="mt-3 border-t border-zinc-800/80 pt-2">
+                <button
+                  className="rounded bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-700 font-medium"
+                  onClick={() => void exportPatch(commit.oid)}
+                  title={t('patch.exportCommit')}
+                  data-testid="commit-export-patch-btn"
+                >
+                  📥 {t('patch.export')}
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -235,6 +247,22 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
       className="flex shrink-0 flex-col border-l border-zinc-800 bg-zinc-950"
       style={{ width: props.width }}
     >
+      <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-1.5 text-xs bg-zinc-900/40">
+        <button
+          className="text-xs text-sky-400 hover:underline"
+          onClick={() => void exportPatch()}
+          data-testid="wip-export-patch-btn"
+        >
+          {t('patch.exportWip')}
+        </button>
+        <button
+          className="text-xs text-sky-400 hover:underline"
+          onClick={openPatchModal}
+          data-testid="wip-apply-patch-btn"
+        >
+          {t('patch.apply')}
+        </button>
+      </div>
       <div className="min-h-0 flex-1 overflow-auto">
         <Section title={t('panel.staged')} count={stagedCount} color="text-emerald-400">
           {groups.staged.map((f) => (

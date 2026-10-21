@@ -134,6 +134,8 @@ interface AppState {
   paletteOpen: boolean
   /** Shortcuts cheatsheet modal visibility. */
   shortcutsOpen: boolean
+  /** Apply patch modal visibility. */
+  patchModalOpen: boolean
   /** Undo/redo stack state for the open repo (owned by the main process). */
   undoInfo: UndoStackStateDto
 
@@ -211,6 +213,11 @@ interface AppState {
   toggleCommandPalette(): void
   openShortcutsModal(): void
   closeShortcutsModal(): void
+
+  openPatchModal(): void
+  closePatchModal(): void
+  exportPatch(oid?: string): Promise<string>
+  applyPatch(opts: { patchPath?: string; patchContent?: string }): Promise<{ mode: 'am' | 'apply'; message: string }>
 
   refreshUndo(): Promise<void>
   undo(): Promise<void>
@@ -428,6 +435,7 @@ export const useApp = create<AppState>((set, get) => {
     workspaceModalOpen: false,
     paletteOpen: false,
     shortcutsOpen: false,
+    patchModalOpen: false,
     undoInfo: { canUndo: false, canRedo: false },
     settings: {
       favorites: [],
@@ -1177,6 +1185,53 @@ export const useApp = create<AppState>((set, get) => {
 
     closeShortcutsModal(): void {
       set({ shortcutsOpen: false })
+    },
+
+    openPatchModal(): void {
+      set({ patchModalOpen: true })
+    },
+
+    closePatchModal(): void {
+      set({ patchModalOpen: false })
+    },
+
+    async exportPatch(oid?: string): Promise<string> {
+      const repoPath = get().repoPath
+      if (!repoPath) return ''
+      try {
+        const defaultName = oid ? `commit-${oid.slice(0, 7)}.patch` : 'working-changes.patch'
+        const savePath = await window.api.pickSavePath({
+          title: t('patch.export'),
+          defaultPath: defaultName,
+          filters: [{ name: 'Patch files', extensions: ['patch', 'diff'] }]
+        })
+        const res = await window.api.patchExport({
+          repoPath,
+          oid,
+          targetPath: savePath || undefined
+        })
+        return res.patch
+      } catch (e) {
+        set({ error: errText(e) })
+        return ''
+      }
+    },
+
+    async applyPatch(opts: {
+      patchPath?: string
+      patchContent?: string
+    }): Promise<{ mode: 'am' | 'apply'; message: string }> {
+      const repoPath = get().repoPath
+      if (!repoPath) throw new Error('No open repository')
+      try {
+        const res = await window.api.patchApply({ repoPath, ...opts })
+        await get().refreshAll()
+        set({ patchModalOpen: false })
+        return res
+      } catch (e) {
+        set({ error: errText(e) })
+        throw e
+      }
     },
 
     async refreshUndo(): Promise<void> {

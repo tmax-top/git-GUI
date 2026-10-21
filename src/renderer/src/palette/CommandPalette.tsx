@@ -31,6 +31,8 @@ export function CommandPalette(): React.JSX.Element | null {
   const openCreatePr = useApp((s) => s.openCreatePr)
   const openWorkspaceModal = useApp((s) => s.openWorkspaceModal)
   const openShortcutsModal = useApp((s) => s.openShortcutsModal)
+  const openPatchModal = useApp((s) => s.openPatchModal)
+  const exportPatch = useApp((s) => s.exportPatch)
   const updateSettings = useApp((s) => s.updateSettings)
   const stashPush = useApp((s) => s.stashPush)
   const stashApply = useApp((s) => s.stashApply)
@@ -176,6 +178,18 @@ export function CommandPalette(): React.JSX.Element | null {
           title: '新建 Pull Request (New PR)',
           category: 'git',
           action: () => openCreatePr()
+        },
+        {
+          id: 'git:patch-export',
+          title: '导出当前更改为 Patch (Export Patch)',
+          category: 'git',
+          action: () => void exportPatch()
+        },
+        {
+          id: 'git:patch-apply',
+          title: '导入并应用 Patch 文件 (Apply Patch)',
+          category: 'git',
+          action: () => openPatchModal()
         }
       )
     }
@@ -272,6 +286,8 @@ export function CommandPalette(): React.JSX.Element | null {
     stashPush,
     stashApply,
     openCreatePr,
+    openPatchModal,
+    exportPatch,
     toggleTerminal,
     togglePrPanel,
     openSearch,

@@ -5,6 +5,7 @@ import { AppShell } from './layout/AppShell'
 import { WorkspaceModal } from './workspaces/WorkspaceModal'
 import { CommandPalette } from './palette/CommandPalette'
 import { ShortcutsModal } from './palette/ShortcutsModal'
+import { ApplyPatchModal } from './patch/ApplyPatchModal'
 import { t } from './i18n'
 
 export default function App(): React.JSX.Element {
@@ -101,6 +102,7 @@ export default function App(): React.JSX.Element {
       <WorkspaceModal />
       <CommandPalette />
       <ShortcutsModal />
+      <ApplyPatchModal />
     </div>
   )
 }

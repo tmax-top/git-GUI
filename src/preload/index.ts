@@ -39,7 +39,9 @@ import type {
   UndoDescriptionDto,
   UndoSnapshotDto,
   UndoStackStateDto,
-  WorktreeInfoDto
+  WorktreeInfoDto,
+  PatchExportResultDto,
+  PatchApplyResultDto
 } from '../shared/ipc'
 // NOTE: sandboxed preload cannot require external modules (e.g. zod) — channel
 // constants live in their own dependency-free module.
@@ -50,6 +52,8 @@ type Unsub = () => void
 export interface GitGuiApi {
   appInfo(): Promise<AppInfoDto>
   pickDirectory(title?: string): Promise<string | null>
+  pickFile(args?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }): Promise<string | null>
+  pickSavePath(args?: { title?: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }): Promise<string | null>
 
   settingsGet(): Promise<AppSettingsDto>
   settingsSet(patch: Partial<AppSettingsDto>): Promise<AppSettingsDto>
@@ -256,6 +260,9 @@ export interface GitGuiApi {
   prMerge(args: { repoPath: string; id: number | string; method?: PrMergeMethod }): Promise<void>
   prCheckout(args: { repoPath: string; branch: string }): Promise<void>
 
+  patchExport(args: { repoPath: string; oid?: string; targetPath?: string }): Promise<PatchExportResultDto>
+  patchApply(args: { repoPath: string; patchPath?: string; patchContent?: string }): Promise<PatchApplyResultDto>
+
   watchStart(repoPath: string): Promise<void>
   watchStop(repoPath: string): Promise<void>
 
@@ -269,6 +276,8 @@ export interface GitGuiApi {
 const api: GitGuiApi = {
   appInfo: () => ipcRenderer.invoke(IPC.appInfo),
   pickDirectory: (title) => ipcRenderer.invoke(IPC.pickDirectory, { title }),
+  pickFile: (args) => ipcRenderer.invoke(IPC.pickFile, args),
+  pickSavePath: (args) => ipcRenderer.invoke(IPC.pickSavePath, args),
 
   settingsGet: () => ipcRenderer.invoke(IPC.settingsGet),
   settingsSet: (patch) => ipcRenderer.invoke(IPC.settingsSet, patch),
@@ -369,6 +378,9 @@ const api: GitGuiApi = {
   prComment: (args) => ipcRenderer.invoke(IPC.prComment, args),
   prMerge: (args) => ipcRenderer.invoke(IPC.prMerge, args),
   prCheckout: (args) => ipcRenderer.invoke(IPC.prCheckout, args),
+
+  patchExport: (args) => ipcRenderer.invoke(IPC.patchExport, args),
+  patchApply: (args) => ipcRenderer.invoke(IPC.patchApply, args),
 
   watchStart: (repoPath) => ipcRenderer.invoke(IPC.watchStart, { repoPath }),
   watchStop: (repoPath) => ipcRenderer.invoke(IPC.watchStop, { repoPath }),

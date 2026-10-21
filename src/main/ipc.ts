@@ -76,13 +76,19 @@ import {
   prCommentSchema,
   prMergeSchema,
   prCheckoutSchema,
+  pickFileSchema,
+  pickSavePathSchema,
+  patchExportRequestSchema,
+  patchApplyRequestSchema,
   type RepoSettingsDto,
   type SubmoduleDetailDto,
   type TerminalCreateDto,
   type ProviderAccountDto,
   type PullRequestDto,
   type PullRequestDetailDto,
-  type RepoRef
+  type RepoRef,
+  type PatchExportResultDto,
+  type PatchApplyResultDto
 } from '../shared/ipc'
 import type {
   ActivityEntryDto,
@@ -177,6 +183,7 @@ import { gitflowFinish, gitflowInit, gitflowStart, gitflowStatus } from './git/g
 import { setSigning, signingStatus } from './git/signing'
 import { openExternalTool, toolForKind } from './tools'
 import { cleanOrigFiles, getRepoSettings, repoEncoding, setRepoSettings } from './git/repoConfig'
+import { applyPatch, exportPatch } from './git/patch'
 import {
   setSubmoduleRecurse,
   getSubmoduleRecurse,
@@ -326,6 +333,28 @@ export function registerIpcHandlers(): void {
     })
     if (result.canceled || result.filePaths.length === 0) return null
     return result.filePaths[0]
+  })
+
+  handle(IPC.pickFile, pickFileSchema, async (arg) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    const result = await dialog.showOpenDialog(win ?? undefined!, {
+      title: arg.title,
+      properties: ['openFile'],
+      filters: arg.filters
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
+  })
+
+  handle(IPC.pickSavePath, pickSavePathSchema, async (arg) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    const result = await dialog.showSaveDialog(win ?? undefined!, {
+      title: arg.title,
+      defaultPath: arg.defaultPath,
+      filters: arg.filters
+    })
+    if (result.canceled || !result.filePath) return null
+    return result.filePath
   })
 
   // --- settings / session --------------------------------------------------
@@ -831,6 +860,15 @@ export function registerIpcHandlers(): void {
 
   handle(IPC.prCheckout, prCheckoutSchema, async (arg): Promise<void> => {
     await checkoutPrBranch(arg.repoPath, arg.branch)
+  })
+
+  // --- patch export & import -----------------------------------------------
+  handle(IPC.patchExport, patchExportRequestSchema, async (arg): Promise<PatchExportResultDto> => {
+    return exportPatch(arg.repoPath, { oid: arg.oid, targetPath: arg.targetPath })
+  })
+
+  handle(IPC.patchApply, patchApplyRequestSchema, async (arg): Promise<PatchApplyResultDto> => {
+    return applyPatch(arg.repoPath, { patchPath: arg.patchPath, patchContent: arg.patchContent })
   })
 
   // --- watcher -------------------------------------------------------------

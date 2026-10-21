@@ -870,5 +870,40 @@ export const prCheckoutSchema = z.object({
   branch: z.string().min(1).max(255)
 })
 
+// --- patch export & import ---------------------------------------------------
+
+export const pickFileSchema = z.object({
+  title: z.string().max(255).optional(),
+  filters: z.array(z.object({ name: z.string(), extensions: z.array(z.string()) })).optional()
+})
+
+export const pickSavePathSchema = z.object({
+  title: z.string().max(255).optional(),
+  defaultPath: z.string().max(1024).optional(),
+  filters: z.array(z.object({ name: z.string(), extensions: z.array(z.string()) })).optional()
+})
+
+export const patchExportRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  oid: oidSchema.optional(),
+  targetPath: z.string().max(1024).optional()
+})
+
+export const patchApplyRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  patchPath: z.string().max(1024).optional(),
+  patchContent: z.string().max(10_000_000).optional()
+})
+
+export interface PatchExportResultDto {
+  patch: string
+  targetPath?: string
+}
+
+export interface PatchApplyResultDto {
+  mode: 'am' | 'apply'
+  message: string
+}
+
 // IPC channel names live in ./channels (sandboxed-preload safe) and are
 // re-exported here for convenience.

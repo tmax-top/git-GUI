@@ -96,7 +96,11 @@ export const IPC = {
   prCreate: 'pr:create',
   prComment: 'pr:comment',
   prMerge: 'pr:merge',
-  prCheckout: 'pr:checkout'
+  prCheckout: 'pr:checkout',
+  pickFile: 'dialog:pickFile',
+  pickSavePath: 'dialog:pickSavePath',
+  patchExport: 'patch:export',
+  patchApply: 'patch:apply'
 } as const
 
 export const IPC_EVENTS = {
