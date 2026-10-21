@@ -122,6 +122,8 @@ export interface AppSettingsDto {
   terminalFontSize: number
   /** Terminal panel height in px, 120–600. */
   terminalHeight: number
+  /** Connected GitProvider accounts. */
+  providerAccounts: import('./providers').ProviderAccountDto[]
 }
 
 /** Command lines for opening files/repos in external tools. */
@@ -710,7 +712,19 @@ export const settingsPatchSchema = z.object({
     .optional(),
   terminalFontFamily: z.string().max(255).optional(),
   terminalFontSize: z.number().int().min(8).max(32).optional(),
-  terminalHeight: z.number().int().min(120).max(600).optional()
+  terminalHeight: z.number().int().min(120).max(600).optional(),
+  providerAccounts: z
+    .array(
+      z.object({
+        provider: z.enum(['github', 'azuredevops']),
+        username: z.string().max(255),
+        displayName: z.string().max(255).optional(),
+        avatarUrl: z.string().url().max(1024).optional(),
+        authType: z.enum(['pat', 'device-flow']),
+        createdAt: z.string().max(64)
+      })
+    )
+    .optional()
 })
 
 /** Read back recent activity-log entries (newest first). */
@@ -754,6 +768,60 @@ export interface TerminalExitDto {
   id: string
   exitCode: number
 }
+
+// --- git providers & pull requests -------------------------------------------
+
+export * from './providers'
+
+export const providerConnectPatSchema = z.object({
+  provider: z.enum(['github', 'azuredevops']),
+  token: z.string().min(1).max(1024),
+  org: z.string().max(256).optional()
+})
+
+export const providerDisconnectSchema = z.object({
+  provider: z.enum(['github', 'azuredevops'])
+})
+
+export const providerDetectRepoRefSchema = z.object({
+  repoPath: repoPathSchema
+})
+
+export const prListSchema = z.object({
+  repoPath: repoPathSchema,
+  state: z.enum(['open', 'closed', 'merged', 'all']).optional()
+})
+
+export const prGetSchema = z.object({
+  repoPath: repoPathSchema,
+  id: z.union([z.number(), z.string().min(1)])
+})
+
+export const prCreateSchema = z.object({
+  repoPath: repoPathSchema,
+  title: z.string().min(1).max(512),
+  description: z.string().max(65536).default(''),
+  sourceBranch: z.string().min(1).max(255),
+  targetBranch: z.string().min(1).max(255),
+  draft: z.boolean().optional()
+})
+
+export const prCommentSchema = z.object({
+  repoPath: repoPathSchema,
+  id: z.union([z.number(), z.string().min(1)]),
+  body: z.string().min(1).max(65536)
+})
+
+export const prMergeSchema = z.object({
+  repoPath: repoPathSchema,
+  id: z.union([z.number(), z.string().min(1)]),
+  method: z.enum(['merge', 'squash', 'rebase']).default('merge')
+})
+
+export const prCheckoutSchema = z.object({
+  repoPath: repoPathSchema,
+  branch: z.string().min(1).max(255)
+})
 
 // IPC channel names live in ./channels (sandboxed-preload safe) and are
 // re-exported here for convenience.

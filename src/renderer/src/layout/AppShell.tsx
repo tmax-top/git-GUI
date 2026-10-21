@@ -12,6 +12,8 @@ import { CommitGraph } from '../graph/CommitGraph'
 import { CommitPanel } from '../panel/CommitPanel'
 import { DiffPanel } from '../panel/DiffPanel'
 import { TerminalPanel } from '../terminal/TerminalPanel'
+import { PrPanel } from '../pr/PrPanel'
+import { CreatePrDialog } from '../pr/CreatePrDialog'
 import { Modal, btnDanger, btnGhost, btnPrimary } from '../components/Modal'
 import { ContextMenu } from '../components/ContextMenu'
 import { Resizer, useResizableSetting } from '../components/Resizer'
@@ -106,6 +108,7 @@ function GlobalMenu(): React.JSX.Element | null {
 
 export function AppShell(): React.JSX.Element {
   const settingsOpen = useApp((s) => s.settingsOpen)
+  const createPrOpen = useApp((s) => s.createPrOpen)
   const left = useResizableSetting('leftPanelWidth', 224, 160, 600)
   const right = useResizableSetting('rightPanelWidth', 320, 220, 700)
   const split = useResizableSetting('graphSplitPct', 55, 15, 85)
@@ -144,6 +147,8 @@ export function AppShell(): React.JSX.Element {
         <CommitPanel width={right.value} />
       </div>
       <TerminalPanel />
+      <PrPanel />
+      {createPrOpen && <CreatePrDialog />}
       <StatusBar />
       <ConfirmModal />
       <PushConflictModal />

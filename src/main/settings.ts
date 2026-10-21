@@ -38,6 +38,8 @@ export interface AppSettings {
   terminalFontSize: number
   /** Terminal panel height in px, 120–600. */
   terminalHeight: number
+  /** Connected GitProvider accounts (GitHub, Azure DevOps); tokens stored in secrets. */
+  providerAccounts: import('../shared/providers').ProviderAccountDto[]
 }
 
 export interface SessionState {
@@ -63,7 +65,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   externalTools: { editor: '', diffTool: '', mergeTool: '', terminal: '' },
   terminalFontFamily: '',
   terminalFontSize: 13,
-  terminalHeight: 240
+  terminalHeight: 240,
+  providerAccounts: []
 }
 
 const DEFAULT_SESSION: SessionState = {

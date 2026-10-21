@@ -4,8 +4,11 @@ import { t } from '../i18n'
 import { Modal, btnGhost, btnPrimary, inputClass } from '../components/Modal'
 import { basename } from '../utils/format'
 import type { ProgressEventDto } from '@shared/ipc'
+import { parseRepoRef } from '@shared/providers'
 
 function defaultNameFromUrl(url: string): string {
+  const ref = parseRepoRef(url)
+  if (ref) return ref.repo
   const cleaned = url.replace(/\.git\/?$/, '').replace(/\/+$/, '')
   const last = cleaned.split('/').pop() ?? 'repo'
   return last.replace(/[^a-zA-Z0-9._-]/g, '-') || 'repo'
@@ -21,6 +24,8 @@ export function CloneDialog(props: { onClose: () => void }): React.JSX.Element {
   const [opId, setOpId] = useState<string | null>(null)
   const [progress, setProgress] = useState<ProgressEventDto | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const repoRef = parseRepoRef(url)
 
   useEffect(() => {
     if (!cloning) return
@@ -97,7 +102,16 @@ export function CloneDialog(props: { onClose: () => void }): React.JSX.Element {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             disabled={cloning}
+            data-testid="clone-url-input"
           />
+          {repoRef && (
+            <div className="mt-1.5 flex items-center gap-1.5 text-xs text-sky-400" data-testid="clone-repo-badge">
+              <span className="rounded bg-sky-950 px-1.5 py-0.5 font-medium text-sky-300">
+                {repoRef.provider === 'github' ? 'GitHub' : 'Azure DevOps'}
+              </span>
+              <span className="font-mono text-zinc-400">{repoRef.canonical}</span>
+            </div>
+          )}
         </label>
         <label className="block">
           <span className="mb-1 block text-zinc-400">{t('clone.dir')}</span>

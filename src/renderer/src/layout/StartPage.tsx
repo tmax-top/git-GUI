@@ -78,7 +78,7 @@ export function StartPage(): React.JSX.Element {
         <button className={btnPrimary() + ' px-5 py-2.5'} onClick={() => void handleOpen()}>
           {t('start.open')}
         </button>
-        <button className={btnGhost() + ' px-5 py-2.5'} onClick={() => setCloneOpen(true)}>
+        <button className={btnGhost() + ' px-5 py-2.5'} onClick={() => setCloneOpen(true)} data-testid="start-clone-btn">
           {t('start.clone')}
         </button>
         <button className={btnGhost() + ' px-5 py-2.5'} onClick={() => setInitOpen(true)}>

@@ -86,7 +86,17 @@ export const IPC = {
   terminalCreate: 'terminal:create',
   terminalWrite: 'terminal:write',
   terminalResize: 'terminal:resize',
-  terminalKill: 'terminal:kill'
+  terminalKill: 'terminal:kill',
+  providerListAccounts: 'provider:listAccounts',
+  providerConnectPat: 'provider:connectPat',
+  providerDisconnect: 'provider:disconnect',
+  providerDetectRepoRef: 'provider:detectRepoRef',
+  prList: 'pr:list',
+  prGet: 'pr:get',
+  prCreate: 'pr:create',
+  prComment: 'pr:comment',
+  prMerge: 'pr:merge',
+  prCheckout: 'pr:checkout'
 } as const
 
 export const IPC_EVENTS = {

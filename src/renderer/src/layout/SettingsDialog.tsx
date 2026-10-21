@@ -156,6 +156,7 @@ export function SettingsDialog(): React.JSX.Element {
         </div>
 
         <ActivityLog />
+        <IntegrationsSection />
         <TerminalSection />
         <HooksSection />
         <LfsSection />
@@ -485,6 +486,164 @@ function TerminalSection(): React.JSX.Element {
           {t('common.confirm')}
         </button>
       </label>
+    </div>
+  )
+}
+
+function IntegrationsSection(): React.JSX.Element {
+  const accounts = useApp((s) => s.settings.providerAccounts ?? [])
+  const connectPat = useApp((s) => s.connectProviderPat)
+  const disconnect = useApp((s) => s.disconnectProvider)
+
+  const ghAccount = accounts.find((a) => a.provider === 'github')
+  const adoAccount = accounts.find((a) => a.provider === 'azuredevops')
+
+  const [ghToken, setGhToken] = useState('')
+  const [ghBusy, setGhBusy] = useState(false)
+  const [ghErr, setGhErr] = useState<string | null>(null)
+
+  const [adoToken, setAdoToken] = useState('')
+  const [adoOrg, setAdoOrg] = useState('')
+  const [adoBusy, setAdoBusy] = useState(false)
+  const [adoErr, setAdoErr] = useState<string | null>(null)
+
+  const handleConnectGh = async (): Promise<void> => {
+    if (!ghToken.trim() || ghBusy) return
+    setGhBusy(true)
+    setGhErr(null)
+    try {
+      await connectPat('github', ghToken.trim())
+      setGhToken('')
+    } catch (e) {
+      setGhErr(e instanceof Error ? e.message : t('error.generic'))
+    } finally {
+      setGhBusy(false)
+    }
+  }
+
+  const handleConnectAdo = async (): Promise<void> => {
+    if (!adoToken.trim() || adoBusy) return
+    setAdoBusy(true)
+    setAdoErr(null)
+    try {
+      await connectPat('azuredevops', adoToken.trim(), adoOrg.trim() || undefined)
+      setAdoToken('')
+    } catch (e) {
+      setAdoErr(e instanceof Error ? e.message : t('error.generic'))
+    } finally {
+      setAdoBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="text-sm font-semibold text-zinc-200">{t('provider.integrations')}</div>
+
+      {/* GitHub Card */}
+      <div className="rounded border border-zinc-800 bg-zinc-950 p-3 text-xs" data-testid="integration-github">
+        <div className="flex items-center justify-between font-medium text-zinc-200 mb-2">
+          <div className="flex items-center gap-2">
+            <span>{t('provider.github')}</span>
+            {ghAccount ? (
+              <span className="text-emerald-400 font-normal">
+                {tf('provider.connectedAs', { name: ghAccount.displayName || ghAccount.username })}
+              </span>
+            ) : (
+              <span className="text-zinc-500 font-normal">{t('provider.noAccount')}</span>
+            )}
+          </div>
+          {ghAccount && (
+            <button
+              className={btnGhost()}
+              onClick={() => void disconnect('github')}
+              data-testid="gh-disconnect"
+            >
+              {t('provider.disconnect')}
+            </button>
+          )}
+        </div>
+
+        {!ghAccount && (
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <input
+                type="password"
+                className={`${inputClass()} flex-1`}
+                value={ghToken}
+                onChange={(e) => setGhToken(e.target.value)}
+                placeholder={t('provider.patPlaceholder')}
+                data-testid="gh-pat-input"
+              />
+              <button
+                className={btnPrimary()}
+                disabled={!ghToken.trim() || ghBusy}
+                onClick={() => void handleConnectGh()}
+                data-testid="gh-connect-btn"
+              >
+                {ghBusy ? '…' : t('provider.connect')}
+              </button>
+            </div>
+            {ghErr && <div className="text-rose-400 text-[11px]">{ghErr}</div>}
+          </div>
+        )}
+      </div>
+
+      {/* Azure DevOps Card */}
+      <div className="rounded border border-zinc-800 bg-zinc-950 p-3 text-xs" data-testid="integration-azuredevops">
+        <div className="flex items-center justify-between font-medium text-zinc-200 mb-2">
+          <div className="flex items-center gap-2">
+            <span>{t('provider.azuredevops')}</span>
+            {adoAccount ? (
+              <span className="text-emerald-400 font-normal">
+                {tf('provider.connectedAs', { name: adoAccount.displayName || adoAccount.username })}
+              </span>
+            ) : (
+              <span className="text-zinc-500 font-normal">{t('provider.noAccount')}</span>
+            )}
+          </div>
+          {adoAccount && (
+            <button
+              className={btnGhost()}
+              onClick={() => void disconnect('azuredevops')}
+              data-testid="ado-disconnect"
+            >
+              {t('provider.disconnect')}
+            </button>
+          )}
+        </div>
+
+        {!adoAccount && (
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className={`${inputClass()} w-32`}
+                value={adoOrg}
+                onChange={(e) => setAdoOrg(e.target.value)}
+                placeholder={t('provider.orgPlaceholder')}
+                data-testid="ado-org-input"
+              />
+              <input
+                type="password"
+                className={`${inputClass()} flex-1`}
+                value={adoToken}
+                onChange={(e) => setAdoToken(e.target.value)}
+                placeholder={t('provider.patPlaceholder')}
+                data-testid="ado-pat-input"
+              />
+              <button
+                className={btnPrimary()}
+                disabled={!adoToken.trim() || adoBusy}
+                onClick={() => void handleConnectAdo()}
+                data-testid="ado-connect-btn"
+              >
+                {adoBusy ? '…' : t('provider.connect')}
+              </button>
+            </div>
+            {adoErr && <div className="text-rose-400 text-[11px]">{adoErr}</div>}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

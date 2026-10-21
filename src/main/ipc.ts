@@ -67,9 +67,22 @@ import {
   terminalWriteRequestSchema,
   terminalResizeRequestSchema,
   terminalKillRequestSchema,
+  providerConnectPatSchema,
+  providerDisconnectSchema,
+  providerDetectRepoRefSchema,
+  prListSchema,
+  prGetSchema,
+  prCreateSchema,
+  prCommentSchema,
+  prMergeSchema,
+  prCheckoutSchema,
   type RepoSettingsDto,
   type SubmoduleDetailDto,
-  type TerminalCreateDto
+  type TerminalCreateDto,
+  type ProviderAccountDto,
+  type PullRequestDto,
+  type PullRequestDetailDto,
+  type RepoRef
 } from '../shared/ipc'
 import type {
   ActivityEntryDto,
@@ -180,6 +193,18 @@ import {
   setTerminalListeners,
   writeTerminal
 } from './terminal'
+import {
+  checkoutPrBranch,
+  commentOnPullRequest,
+  connectPat,
+  createPullRequest,
+  detectRepoRef,
+  disconnectProvider,
+  getPullRequest,
+  listProviderAccounts,
+  listPullRequests,
+  mergePullRequest
+} from './providers'
 
 const abortControllers = new Map<string, AbortController>()
 const watcher = new RepoWatcher()
@@ -765,6 +790,47 @@ export function registerIpcHandlers(): void {
 
   handle(IPC.terminalKill, terminalKillRequestSchema, (arg): void => {
     killTerminal(arg.id)
+  })
+
+  // --- git providers & pull requests ----------------------------------------
+  handle(IPC.providerListAccounts, z.void(), async (): Promise<ProviderAccountDto[]> => {
+    return listProviderAccounts()
+  })
+
+  handle(IPC.providerConnectPat, providerConnectPatSchema, async (arg): Promise<ProviderAccountDto> => {
+    return connectPat(arg)
+  })
+
+  handle(IPC.providerDisconnect, providerDisconnectSchema, async (arg): Promise<void> => {
+    await disconnectProvider(arg.provider)
+  })
+
+  handle(IPC.providerDetectRepoRef, providerDetectRepoRefSchema, async (arg): Promise<RepoRef | null> => {
+    return detectRepoRef(arg.repoPath)
+  })
+
+  handle(IPC.prList, prListSchema, async (arg): Promise<PullRequestDto[]> => {
+    return listPullRequests(arg.repoPath, arg.state)
+  })
+
+  handle(IPC.prGet, prGetSchema, async (arg): Promise<PullRequestDetailDto> => {
+    return getPullRequest(arg.repoPath, arg.id)
+  })
+
+  handle(IPC.prCreate, prCreateSchema, async (arg): Promise<PullRequestDto> => {
+    return createPullRequest(arg.repoPath, arg)
+  })
+
+  handle(IPC.prComment, prCommentSchema, async (arg): Promise<void> => {
+    await commentOnPullRequest(arg.repoPath, arg.id, arg.body)
+  })
+
+  handle(IPC.prMerge, prMergeSchema, async (arg): Promise<void> => {
+    await mergePullRequest(arg.repoPath, arg.id, arg.method)
+  })
+
+  handle(IPC.prCheckout, prCheckoutSchema, async (arg): Promise<void> => {
+    await checkoutPrBranch(arg.repoPath, arg.branch)
   })
 
   // --- watcher -------------------------------------------------------------

@@ -27,6 +27,14 @@ import type {
   SigningStatusDto,
   TerminalCreateDto,
   TerminalExitDto,
+  ProviderAccountDto,
+  ProviderKind,
+  PullRequestDto,
+  PullRequestDetailDto,
+  CreatePrInputDto,
+  PrState,
+  PrMergeMethod,
+  RepoRef,
   UndoApplyResultDto,
   UndoDescriptionDto,
   UndoSnapshotDto,
@@ -236,6 +244,18 @@ export interface GitGuiApi {
   terminalResize(args: { id: string; cols: number; rows: number }): Promise<void>
   terminalKill(args: { id: string }): Promise<void>
 
+  providerListAccounts(): Promise<ProviderAccountDto[]>
+  providerConnectPat(args: { provider: ProviderKind; token: string; org?: string }): Promise<ProviderAccountDto>
+  providerDisconnect(args: { provider: ProviderKind }): Promise<void>
+  providerDetectRepoRef(args: { repoPath: string }): Promise<RepoRef | null>
+
+  prList(args: { repoPath: string; state?: PrState | 'all' }): Promise<PullRequestDto[]>
+  prGet(args: { repoPath: string; id: number | string }): Promise<PullRequestDetailDto>
+  prCreate(args: { repoPath: string } & CreatePrInputDto): Promise<PullRequestDto>
+  prComment(args: { repoPath: string; id: number | string; body: string }): Promise<void>
+  prMerge(args: { repoPath: string; id: number | string; method?: PrMergeMethod }): Promise<void>
+  prCheckout(args: { repoPath: string; branch: string }): Promise<void>
+
   watchStart(repoPath: string): Promise<void>
   watchStop(repoPath: string): Promise<void>
 
@@ -337,6 +357,18 @@ const api: GitGuiApi = {
   terminalWrite: (args) => ipcRenderer.invoke(IPC.terminalWrite, args),
   terminalResize: (args) => ipcRenderer.invoke(IPC.terminalResize, args),
   terminalKill: (args) => ipcRenderer.invoke(IPC.terminalKill, args),
+
+  providerListAccounts: () => ipcRenderer.invoke(IPC.providerListAccounts),
+  providerConnectPat: (args) => ipcRenderer.invoke(IPC.providerConnectPat, args),
+  providerDisconnect: (args) => ipcRenderer.invoke(IPC.providerDisconnect, args),
+  providerDetectRepoRef: (args) => ipcRenderer.invoke(IPC.providerDetectRepoRef, args),
+
+  prList: (args) => ipcRenderer.invoke(IPC.prList, args),
+  prGet: (args) => ipcRenderer.invoke(IPC.prGet, args),
+  prCreate: (args) => ipcRenderer.invoke(IPC.prCreate, args),
+  prComment: (args) => ipcRenderer.invoke(IPC.prComment, args),
+  prMerge: (args) => ipcRenderer.invoke(IPC.prMerge, args),
+  prCheckout: (args) => ipcRenderer.invoke(IPC.prCheckout, args),
 
   watchStart: (repoPath) => ipcRenderer.invoke(IPC.watchStart, { repoPath }),
   watchStop: (repoPath) => ipcRenderer.invoke(IPC.watchStop, { repoPath }),

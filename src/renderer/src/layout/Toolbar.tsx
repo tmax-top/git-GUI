@@ -26,6 +26,8 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const openSettings = useApp((s) => s.openSettings)
   const terminalOpen = useApp((s) => s.terminalOpen)
   const toggleTerminal = useApp((s) => s.toggleTerminal)
+  const prPanelOpen = useApp((s) => s.prPanelOpen)
+  const togglePrPanel = useApp((s) => s.togglePrPanel)
   const undoInfo = useApp((s) => s.undoInfo)
   const undo = useApp((s) => s.undo)
   const redo = useApp((s) => s.redo)
@@ -113,6 +115,15 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
         data-testid="toolbar-terminal"
       >
         ❯_
+      </button>
+
+      <button
+        className={`rounded px-2 py-1 text-xs font-semibold ${prPanelOpen ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800'}`}
+        onClick={togglePrPanel}
+        title={t('pr.toggle')}
+        data-testid="toolbar-pr"
+      >
+        PR
       </button>
 
       <button

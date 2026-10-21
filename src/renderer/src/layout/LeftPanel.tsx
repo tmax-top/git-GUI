@@ -7,19 +7,33 @@ function Section(props: {
   count: number
   children: React.ReactNode
   defaultOpen?: boolean
+  alwaysShow?: boolean
+  action?: { label: string; onClick: () => void; testId?: string }
 }): React.JSX.Element {
   const [open, setOpen] = useState(props.defaultOpen ?? true)
-  if (props.count === 0) return <></>
+  if (props.count === 0 && !props.alwaysShow) return <></>
   return (
     <div className="border-b border-zinc-900">
-      <button
-        className="flex w-full items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 hover:bg-zinc-900"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span>{open ? '▾' : '▸'}</span>
-        <span className="flex-1 text-left">{props.title}</span>
-        <span className="text-zinc-500">{props.count}</span>
-      </button>
+      <div className="flex w-full items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 hover:bg-zinc-900">
+        <button
+          className="flex flex-1 items-center gap-1 text-left"
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span>{open ? '▾' : '▸'}</span>
+          <span className="flex-1 truncate">{props.title}</span>
+          <span className="text-zinc-500">{props.count}</span>
+        </button>
+        {props.action && (
+          <button
+            className="rounded px-1 text-xs text-zinc-400 hover:text-zinc-100"
+            onClick={props.action.onClick}
+            title={props.action.label}
+            data-testid={props.action.testId}
+          >
+            ＋
+          </button>
+        )}
+      </div>
       {open && <div className="pb-1">{props.children}</div>}
     </div>
   )
@@ -71,6 +85,12 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
   const stashDrop = useApp((s) => s.stashDrop)
   const setConfirm = useApp((s) => s.setConfirm)
   const setPrompt = useApp((s) => s.setPrompt)
+  const prs = useApp((s) => s.prs)
+  const activeRepoRef = useApp((s) => s.activeRepoRef)
+  const prPanelOpen = useApp((s) => s.prPanelOpen)
+  const togglePrPanel = useApp((s) => s.togglePrPanel)
+  const openCreatePr = useApp((s) => s.openCreatePr)
+  const selectPr = useApp((s) => s.selectPr)
   const [error, setError] = useState<string | null>(null)
 
   const local = (refs?.branches ?? []).filter((b) => !b.isRemote)
@@ -270,6 +290,32 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
           <Row key={s.path} label={s.path} badge={s.status.trim() || '='} badgeColor="#0f766e" />
         ))}
       </Section>
+
+      {activeRepoRef && (
+        <Section
+          title={t('left.pullRequests')}
+          count={prs.length}
+          alwaysShow
+          defaultOpen
+          action={{ label: t('pr.new'), onClick: openCreatePr, testId: 'left-new-pr' }}
+        >
+          <Row label={t('pr.toggle')} onClick={togglePrPanel} />
+          {prs.map((p) => (
+            <Row
+              key={p.id}
+              label={`#${p.number} ${p.title}`}
+              badge={p.state}
+              badgeColor={
+                p.state === 'open' ? '#16a34a' : p.state === 'merged' ? '#9333ea' : '#dc2626'
+              }
+              onClick={() => {
+                void selectPr(p.id)
+                if (!prPanelOpen) togglePrPanel()
+              }}
+            />
+          ))}
+        </Section>
+      )}
 
       {error && <div className="px-3 py-2 text-[11px] text-rose-400">{error}</div>}
       {!repoPath && null}

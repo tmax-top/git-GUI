@@ -13,7 +13,15 @@ import type {
   StatusFileDto,
   UndoApplyResultDto,
   UndoSnapshotDto,
-  UndoStackStateDto
+  UndoStackStateDto,
+  CreatePrInputDto,
+  PrMergeMethod,
+  ProviderAccountDto,
+  ProviderKind,
+  PullRequestDetailDto,
+  PullRequestDto,
+  RepoRef,
+  PrState
 } from '@shared/ipc'
 import { isUntracked, stagedFiles, untrackedFiles } from '@shared/status'
 import { setLocale, t, tf, type Locale, type MessageKey } from './i18n'
@@ -103,6 +111,20 @@ interface AppState {
   settingsOpen: boolean
   /** Embedded terminal panel visibility. */
   terminalOpen: boolean
+  /** GitProvider / RepoRef detected for current repo. */
+  activeRepoRef: RepoRef | null
+  /** PR side/drawer panel visibility. */
+  prPanelOpen: boolean
+  /** Create PR modal visibility. */
+  createPrOpen: boolean
+  /** List of PRs for current repo. */
+  prs: PullRequestDto[]
+  prLoading: boolean
+  /** Active PR selected. */
+  activePrId: string | number | null
+  activePrDetail: PullRequestDetailDto | null
+  activePrLoading: boolean
+  prFilter: PrState | 'all'
   /** Undo/redo stack state for the open repo (owned by the main process). */
   undoInfo: UndoStackStateDto
 
@@ -148,6 +170,18 @@ interface AppState {
   openSettings(): void
   closeSettings(): void
   toggleTerminal(): void
+  togglePrPanel(): void
+  openCreatePr(): void
+  closeCreatePr(): void
+  setPrFilter(filter: PrState | 'all'): void
+  loadPrs(): Promise<void>
+  selectPr(id: string | number | null): Promise<void>
+  createPr(input: CreatePrInputDto): Promise<void>
+  commentPr(body: string): Promise<void>
+  mergePr(method: PrMergeMethod): Promise<void>
+  checkoutPr(branch: string): Promise<void>
+  connectProviderPat(provider: ProviderKind, token: string, org?: string): Promise<ProviderAccountDto>
+  disconnectProvider(provider: ProviderKind): Promise<void>
   refreshUndo(): Promise<void>
   undo(): Promise<void>
   redo(): Promise<void>
@@ -352,6 +386,15 @@ export const useApp = create<AppState>((set, get) => {
     searchOpen: false,
     settingsOpen: false,
     terminalOpen: false,
+    activeRepoRef: null,
+    prPanelOpen: false,
+    createPrOpen: false,
+    prs: [],
+    prLoading: false,
+    activePrId: null,
+    activePrDetail: null,
+    activePrLoading: false,
+    prFilter: 'open',
     undoInfo: { canUndo: false, canRedo: false },
     settings: {
       favorites: [],
@@ -371,7 +414,8 @@ export const useApp = create<AppState>((set, get) => {
       externalTools: { editor: '', diffTool: '', mergeTool: '', terminal: '' },
       terminalFontFamily: '',
       terminalFontSize: 13,
-      terminalHeight: 240
+      terminalHeight: 240,
+      providerAccounts: []
     },
 
     async boot(): Promise<void> {
@@ -449,6 +493,9 @@ export const useApp = create<AppState>((set, get) => {
         void window.api.sessionSet({ openRepos: [path], activeRepo: path })
         const recents = [path, ...get().settings.recent.filter((p) => p !== path)].slice(0, 20)
         void get().updateSettings({ recent: recents })
+        const ref = await window.api.providerDetectRepoRef({ repoPath: path }).catch(() => null)
+        set({ activeRepoRef: ref, prs: [], activePrId: null, activePrDetail: null })
+        if (ref) void get().loadPrs()
         await get().refreshAll()
         await get().refreshUndo()
         return true
@@ -479,12 +526,24 @@ export const useApp = create<AppState>((set, get) => {
         rebaseDialog: null,
         searchOpen: false,
         settingsOpen: false,
+        activeRepoRef: null,
+        prPanelOpen: false,
+        createPrOpen: false,
+        prs: [],
+        activePrId: null,
+        activePrDetail: null,
         undoInfo: { canUndo: false, canRedo: false }
       })
       void window.api.sessionSet({ activeRepo: null })
     },
 
     async refreshAll(): Promise<void> {
+      const repoPath = get().repoPath
+      if (repoPath) {
+        const ref = await window.api.providerDetectRepoRef({ repoPath }).catch(() => null)
+        set({ activeRepoRef: ref })
+        if (ref && get().prPanelOpen) void get().loadPrs()
+      }
       await Promise.all([
         get().refreshStatus(),
         get().loadGraph(true),
@@ -822,6 +881,123 @@ export const useApp = create<AppState>((set, get) => {
 
     toggleTerminal(): void {
       set({ terminalOpen: !get().terminalOpen })
+    },
+
+    togglePrPanel(): void {
+      const next = !get().prPanelOpen
+      set({ prPanelOpen: next })
+      if (next && get().prs.length === 0 && get().activeRepoRef) {
+        void get().loadPrs()
+      }
+    },
+
+    openCreatePr(): void {
+      set({ createPrOpen: true })
+    },
+
+    closeCreatePr(): void {
+      set({ createPrOpen: false })
+    },
+
+    setPrFilter(filter: PrState | 'all'): void {
+      set({ prFilter: filter })
+      void get().loadPrs()
+    },
+
+    async loadPrs(): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      set({ prLoading: true })
+      try {
+        const prs = await window.api.prList({ repoPath, state: get().prFilter })
+        set({ prs, prLoading: false })
+      } catch (e) {
+        set({ prLoading: false })
+        if (get().prPanelOpen) set({ error: errText(e) })
+      }
+    },
+
+    async selectPr(id: string | number | null): Promise<void> {
+      set({ activePrId: id, activePrDetail: null })
+      const repoPath = get().repoPath
+      if (!repoPath || id == null) return
+      set({ activePrLoading: true })
+      try {
+        const detail = await window.api.prGet({ repoPath, id })
+        set({ activePrDetail: detail, activePrLoading: false })
+      } catch (e) {
+        set({ activePrLoading: false, error: errText(e) })
+      }
+    },
+
+    async createPr(input: CreatePrInputDto): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      try {
+        const created = await window.api.prCreate({ repoPath, ...input })
+        set({ createPrOpen: false })
+        await get().loadPrs()
+        await get().selectPr(created.id)
+      } catch (e) {
+        set({ error: errText(e) })
+      }
+    },
+
+    async commentPr(body: string): Promise<void> {
+      const repoPath = get().repoPath
+      const prId = get().activePrId
+      if (!repoPath || prId == null) return
+      try {
+        await window.api.prComment({ repoPath, id: prId, body })
+        await get().selectPr(prId)
+      } catch (e) {
+        set({ error: errText(e) })
+      }
+    },
+
+    async mergePr(method: PrMergeMethod): Promise<void> {
+      const repoPath = get().repoPath
+      const prId = get().activePrId
+      if (!repoPath || prId == null) return
+      try {
+        await window.api.prMerge({ repoPath, id: prId, method })
+        await get().loadPrs()
+        await get().selectPr(prId)
+        await get().refreshAll()
+      } catch (e) {
+        set({ error: errText(e) })
+      }
+    },
+
+    async checkoutPr(branch: string): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      try {
+        await window.api.prCheckout({ repoPath, branch })
+        await get().refreshAll()
+      } catch (e) {
+        set({ error: errText(e) })
+      }
+    },
+
+    async connectProviderPat(
+      provider: ProviderKind,
+      token: string,
+      org?: string
+    ): Promise<ProviderAccountDto> {
+      const account = await window.api.providerConnectPat({ provider, token, org })
+      const settings = await window.api.settingsGet()
+      set({ settings })
+      if (get().activeRepoRef?.provider === provider) {
+        void get().loadPrs()
+      }
+      return account
+    },
+
+    async disconnectProvider(provider: ProviderKind): Promise<void> {
+      await window.api.providerDisconnect({ provider })
+      const settings = await window.api.settingsGet()
+      set({ settings })
     },
 
     async refreshUndo(): Promise<void> {
