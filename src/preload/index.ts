@@ -25,6 +25,8 @@ import type {
   SearchScope,
   SessionStateDto,
   SigningStatusDto,
+  TerminalCreateDto,
+  TerminalExitDto,
   UndoApplyResultDto,
   UndoDescriptionDto,
   UndoSnapshotDto,
@@ -229,12 +231,19 @@ export interface GitGuiApi {
   }): Promise<void>
   worktreeRemove(args: { repoPath: string; path: string; force?: boolean }): Promise<void>
 
+  terminalCreate(args: { cwd?: string; cols: number; rows: number }): Promise<TerminalCreateDto>
+  terminalWrite(args: { id: string; data: string }): Promise<void>
+  terminalResize(args: { id: string; cols: number; rows: number }): Promise<void>
+  terminalKill(args: { id: string }): Promise<void>
+
   watchStart(repoPath: string): Promise<void>
   watchStop(repoPath: string): Promise<void>
 
   onRepoChanged(cb: (repoPath: string) => void): Unsub
   onGitProgress(cb: (payload: { opId: string; event: ProgressEventDto }) => void): Unsub
   onActivity(cb: (entry: ActivityEntryDto) => void): Unsub
+  onTerminalData(cb: (payload: { id: string; data: string }) => void): Unsub
+  onTerminalExit(cb: (payload: TerminalExitDto) => void): Unsub
 }
 
 const api: GitGuiApi = {
@@ -324,6 +333,11 @@ const api: GitGuiApi = {
   worktreeAdd: (args) => ipcRenderer.invoke(IPC.worktreeAdd, args),
   worktreeRemove: (args) => ipcRenderer.invoke(IPC.worktreeRemove, args),
 
+  terminalCreate: (args) => ipcRenderer.invoke(IPC.terminalCreate, args),
+  terminalWrite: (args) => ipcRenderer.invoke(IPC.terminalWrite, args),
+  terminalResize: (args) => ipcRenderer.invoke(IPC.terminalResize, args),
+  terminalKill: (args) => ipcRenderer.invoke(IPC.terminalKill, args),
+
   watchStart: (repoPath) => ipcRenderer.invoke(IPC.watchStart, { repoPath }),
   watchStop: (repoPath) => ipcRenderer.invoke(IPC.watchStop, { repoPath }),
 
@@ -345,6 +359,19 @@ const api: GitGuiApi = {
     const listener = (_e: Electron.IpcRendererEvent, entry: ActivityEntryDto): void => cb(entry)
     ipcRenderer.on(IPC_EVENTS.activityNew, listener)
     return () => ipcRenderer.removeListener(IPC_EVENTS.activityNew, listener)
+  },
+  onTerminalData: (cb) => {
+    const listener = (
+      _e: Electron.IpcRendererEvent,
+      payload: { id: string; data: string }
+    ): void => cb(payload)
+    ipcRenderer.on(IPC_EVENTS.terminalData, listener)
+    return () => ipcRenderer.removeListener(IPC_EVENTS.terminalData, listener)
+  },
+  onTerminalExit: (cb) => {
+    const listener = (_e: Electron.IpcRendererEvent, payload: TerminalExitDto): void => cb(payload)
+    ipcRenderer.on(IPC_EVENTS.terminalExit, listener)
+    return () => ipcRenderer.removeListener(IPC_EVENTS.terminalExit, listener)
   }
 }
 

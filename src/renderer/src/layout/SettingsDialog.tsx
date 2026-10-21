@@ -156,6 +156,7 @@ export function SettingsDialog(): React.JSX.Element {
         </div>
 
         <ActivityLog />
+        <TerminalSection />
         <HooksSection />
         <LfsSection />
         <GitflowSection />
@@ -435,6 +436,55 @@ function RepoSettingsSection(): React.JSX.Element {
           {msg && <div className="text-xs text-zinc-400">{msg}</div>}
         </>
       )}
+    </div>
+  )
+}
+
+function TerminalSection(): React.JSX.Element {
+  const settings = useApp((s) => s.settings)
+  const updateSettings = useApp((s) => s.updateSettings)
+  const [fontFamily, setFontFamily] = useState(settings.terminalFontFamily ?? '')
+  const [fontSize, setFontSize] = useState(settings.terminalFontSize ?? 13)
+  const [saving, setSaving] = useState(false)
+
+  const save = async (): Promise<void> => {
+    setSaving(true)
+    try {
+      await updateSettings({ terminalFontFamily: fontFamily.trim(), terminalFontSize: fontSize })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-sm font-semibold text-zinc-200">{t('terminal.title')}</div>
+      <label className="flex items-center gap-2 text-sm text-zinc-300">
+        <span className="w-24 shrink-0">{t('terminal.fontFamily')}</span>
+        <input
+          className={inputClass()}
+          value={fontFamily}
+          placeholder={t('terminal.fontFamilyPlaceholder')}
+          onChange={(e) => setFontFamily(e.target.value)}
+        />
+      </label>
+      <label className="flex items-center gap-2 text-sm text-zinc-300">
+        <span className="w-24 shrink-0">{t('terminal.fontSize')}</span>
+        <select
+          className={`${inputClass()} w-20`}
+          value={fontSize}
+          onChange={(e) => setFontSize(Number(e.target.value))}
+        >
+          {[9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 24].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+        <button className={btnPrimary()} disabled={saving} onClick={() => void save()}>
+          {t('common.confirm')}
+        </button>
+      </label>
     </div>
   )
 }

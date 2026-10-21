@@ -57,6 +57,7 @@ export type NumberSettingKey =
   | 'graphAuthorWidth'
   | 'graphDateWidth'
   | 'graphOidWidth'
+  | 'terminalHeight'
 
 interface ResizerProps {
   /** vertical = drag left/right (col-resize); horizontal = drag up/down (row-resize). */

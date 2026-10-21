@@ -44,6 +44,11 @@ export default function App(): React.JSX.Element {
           st.openSearch()
         }
       }
+      // Toggle the embedded terminal: Ctrl+` (Cmd is reserved for macOS UI).
+      if (e.ctrlKey && !e.metaKey && e.key === '`') {
+        e.preventDefault()
+        useApp.getState().toggleTerminal()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

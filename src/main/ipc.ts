@@ -63,8 +63,13 @@ import {
   submodulePathRequestSchema,
   submoduleSetUpdateRequestSchema,
   submoduleSetRecurseRequestSchema,
+  terminalCreateRequestSchema,
+  terminalWriteRequestSchema,
+  terminalResizeRequestSchema,
+  terminalKillRequestSchema,
   type RepoSettingsDto,
-  type SubmoduleDetailDto
+  type SubmoduleDetailDto,
+  type TerminalCreateDto
 } from '../shared/ipc'
 import type {
   ActivityEntryDto,
@@ -167,6 +172,14 @@ import {
   submoduleInit,
   submoduleUpdate
 } from './git/submodule'
+import {
+  createTerminal,
+  killAllTerminals,
+  killTerminal,
+  resizeTerminal,
+  setTerminalListeners,
+  writeTerminal
+} from './terminal'
 
 const abortControllers = new Map<string, AbortController>()
 const watcher = new RepoWatcher()
@@ -724,6 +737,36 @@ export function registerIpcHandlers(): void {
     return { recurse: await getSubmoduleRecurse(arg.repoPath) }
   })
 
+  // --- embedded terminal ----------------------------------------------------
+  setTerminalListeners({
+    onData: (id, data) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) win.webContents.send(IPC_EVENTS.terminalData, { id, data })
+      }
+    },
+    onExit: (id, exitCode) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) win.webContents.send(IPC_EVENTS.terminalExit, { id, exitCode })
+      }
+    }
+  })
+
+  handle(IPC.terminalCreate, terminalCreateRequestSchema, (arg): TerminalCreateDto => ({
+    id: createTerminal(arg)
+  }))
+
+  handle(IPC.terminalWrite, terminalWriteRequestSchema, (arg): void => {
+    writeTerminal(arg.id, arg.data)
+  })
+
+  handle(IPC.terminalResize, terminalResizeRequestSchema, (arg): void => {
+    resizeTerminal(arg.id, arg.cols, arg.rows)
+  })
+
+  handle(IPC.terminalKill, terminalKillRequestSchema, (arg): void => {
+    killTerminal(arg.id)
+  })
+
   // --- watcher -------------------------------------------------------------
   handle(IPC.watchStart, watchRequestSchema, (arg) => {
     watcher.start(arg.repoPath, broadcastRepoChanged)
@@ -737,6 +780,8 @@ export function registerIpcHandlers(): void {
 export function disposeWatchers(): void {
   autoFetch.stop()
   setActivityListener(null)
+  setTerminalListeners(null)
+  killAllTerminals()
   watcher.stopAll()
   for (const controller of abortControllers.values()) controller.abort()
   abortControllers.clear()

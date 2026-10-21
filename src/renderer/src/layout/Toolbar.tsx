@@ -24,6 +24,8 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const closeRepo = useApp((s) => s.closeRepo)
   const openSearch = useApp((s) => s.openSearch)
   const openSettings = useApp((s) => s.openSettings)
+  const terminalOpen = useApp((s) => s.terminalOpen)
+  const toggleTerminal = useApp((s) => s.toggleTerminal)
   const undoInfo = useApp((s) => s.undoInfo)
   const undo = useApp((s) => s.undo)
   const redo = useApp((s) => s.redo)
@@ -102,6 +104,15 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
         title={`${t('search.title')} (⌘F)`}
       >
         ⌕
+      </button>
+
+      <button
+        className={`rounded px-2 py-1 ${terminalOpen ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800'}`}
+        onClick={toggleTerminal}
+        title={t('terminal.toggle')}
+        data-testid="toolbar-terminal"
+      >
+        ❯_
       </button>
 
       <button

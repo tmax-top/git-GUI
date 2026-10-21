@@ -82,11 +82,17 @@ export const IPC = {
   submoduleSetRecurse: 'submodule:setRecurse',
   worktreeList: 'worktree:list',
   worktreeAdd: 'worktree:add',
-  worktreeRemove: 'worktree:remove'
+  worktreeRemove: 'worktree:remove',
+  terminalCreate: 'terminal:create',
+  terminalWrite: 'terminal:write',
+  terminalResize: 'terminal:resize',
+  terminalKill: 'terminal:kill'
 } as const
 
 export const IPC_EVENTS = {
   repoChanged: 'repo:changed',
   gitProgress: 'git:progress',
-  activityNew: 'activity:new'
+  activityNew: 'activity:new',
+  terminalData: 'terminal:data',
+  terminalExit: 'terminal:exit'
 } as const

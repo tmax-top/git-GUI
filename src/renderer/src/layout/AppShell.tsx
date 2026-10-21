@@ -11,6 +11,7 @@ import { SettingsDialog } from './SettingsDialog'
 import { CommitGraph } from '../graph/CommitGraph'
 import { CommitPanel } from '../panel/CommitPanel'
 import { DiffPanel } from '../panel/DiffPanel'
+import { TerminalPanel } from '../terminal/TerminalPanel'
 import { Modal, btnDanger, btnGhost, btnPrimary } from '../components/Modal'
 import { ContextMenu } from '../components/ContextMenu'
 import { Resizer, useResizableSetting } from '../components/Resizer'
@@ -142,6 +143,7 @@ export function AppShell(): React.JSX.Element {
         />
         <CommitPanel width={right.value} />
       </div>
+      <TerminalPanel />
       <StatusBar />
       <ConfirmModal />
       <PushConflictModal />

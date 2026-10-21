@@ -32,6 +32,12 @@ export interface AppSettings {
     mergeTool: string
     terminal: string
   }
+  /** Font family for the embedded terminal; empty = xterm default. */
+  terminalFontFamily: string
+  /** Font size (px) for the embedded terminal, 8–32. */
+  terminalFontSize: number
+  /** Terminal panel height in px, 120–600. */
+  terminalHeight: number
 }
 
 export interface SessionState {
@@ -54,7 +60,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   autoFetchInterval: 0,
   autoPrune: true,
   notifications: true,
-  externalTools: { editor: '', diffTool: '', mergeTool: '', terminal: '' }
+  externalTools: { editor: '', diffTool: '', mergeTool: '', terminal: '' },
+  terminalFontFamily: '',
+  terminalFontSize: 13,
+  terminalHeight: 240
 }
 
 const DEFAULT_SESSION: SessionState = {

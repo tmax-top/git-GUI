@@ -359,6 +359,16 @@ export const zh = {
   'activity.kind.push': '推送',
   'activity.failed': '失败',
 
+  'terminal.title': '终端',
+  'terminal.toggle': '显示/隐藏终端 (⌃`)',
+  'terminal.new': '新建标签',
+  'terminal.close': '关闭标签',
+  'terminal.exited': '进程已退出（代码 {n}）',
+  'terminal.fontFamily': '字体',
+  'terminal.fontFamilyPlaceholder': '留空使用默认字体',
+  'terminal.fontSize': '字号',
+  'terminal.noRepoHint': '未打开仓库时终端使用主目录。',
+
   'error.notRepo': '不是 git 仓库',
   'error.generic': '操作失败'
 }
@@ -723,6 +733,16 @@ export const en = {
   'activity.kind.pull': 'Pull',
   'activity.kind.push': 'Push',
   'activity.failed': 'Failed',
+
+  'terminal.title': 'Terminal',
+  'terminal.toggle': 'Toggle terminal (⌃`)',
+  'terminal.new': 'New tab',
+  'terminal.close': 'Close tab',
+  'terminal.exited': 'Process exited (code {n})',
+  'terminal.fontFamily': 'Font family',
+  'terminal.fontFamilyPlaceholder': 'Empty = default font',
+  'terminal.fontSize': 'Font size',
+  'terminal.noRepoHint': 'The terminal uses your home folder when no repository is open.',
 
   'error.notRepo': 'Not a git repository',
   'error.generic': 'Operation failed'

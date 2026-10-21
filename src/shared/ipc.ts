@@ -116,6 +116,12 @@ export interface AppSettingsDto {
   notifications: boolean
   /** User-configured external tool command lines; empty = feature off. */
   externalTools: ExternalToolCommandDto
+  /** Font family for the embedded terminal; empty = xterm default. */
+  terminalFontFamily: string
+  /** Font size (px) for the embedded terminal, 8–32. */
+  terminalFontSize: number
+  /** Terminal panel height in px, 120–600. */
+  terminalHeight: number
 }
 
 /** Command lines for opening files/repos in external tools. */
@@ -701,7 +707,10 @@ export const settingsPatchSchema = z.object({
       mergeTool: z.string().max(1024),
       terminal: z.string().max(1024)
     })
-    .optional()
+    .optional(),
+  terminalFontFamily: z.string().max(255).optional(),
+  terminalFontSize: z.number().int().min(8).max(32).optional(),
+  terminalHeight: z.number().int().min(120).max(600).optional()
 })
 
 /** Read back recent activity-log entries (newest first). */
@@ -713,6 +722,38 @@ export const sessionPatchSchema = z.object({
 })
 
 export const pickDirectorySchema = z.object({ title: z.string().max(255).optional() })
+
+// --- embedded terminal -------------------------------------------------------
+
+const ptyIdSchema = z.string().min(1).max(64)
+
+export const terminalCreateRequestSchema = z.object({
+  cwd: repoPathSchema.optional(),
+  cols: z.number().int().min(10).max(1000),
+  rows: z.number().int().min(4).max(500)
+})
+
+export const terminalWriteRequestSchema = z.object({
+  id: ptyIdSchema,
+  data: z.string().max(1_000_000)
+})
+
+export const terminalResizeRequestSchema = z.object({
+  id: ptyIdSchema,
+  cols: z.number().int().min(10).max(1000),
+  rows: z.number().int().min(4).max(500)
+})
+
+export const terminalKillRequestSchema = z.object({ id: ptyIdSchema })
+
+export interface TerminalCreateDto {
+  id: string
+}
+
+export interface TerminalExitDto {
+  id: string
+  exitCode: number
+}
 
 // IPC channel names live in ./channels (sandboxed-preload safe) and are
 // re-exported here for convenience.

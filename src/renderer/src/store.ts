@@ -101,6 +101,8 @@ interface AppState {
   searchOpen: boolean
   /** Settings dialog visibility (auto-fetch / prune / activity log). */
   settingsOpen: boolean
+  /** Embedded terminal panel visibility. */
+  terminalOpen: boolean
   /** Undo/redo stack state for the open repo (owned by the main process). */
   undoInfo: UndoStackStateDto
 
@@ -145,6 +147,7 @@ interface AppState {
   closeSearch(): void
   openSettings(): void
   closeSettings(): void
+  toggleTerminal(): void
   refreshUndo(): Promise<void>
   undo(): Promise<void>
   redo(): Promise<void>
@@ -348,6 +351,7 @@ export const useApp = create<AppState>((set, get) => {
     rebaseDialog: null,
     searchOpen: false,
     settingsOpen: false,
+    terminalOpen: false,
     undoInfo: { canUndo: false, canRedo: false },
     settings: {
       favorites: [],
@@ -364,7 +368,10 @@ export const useApp = create<AppState>((set, get) => {
       autoFetchInterval: 0,
       autoPrune: true,
       notifications: true,
-      externalTools: { editor: '', diffTool: '', mergeTool: '', terminal: '' }
+      externalTools: { editor: '', diffTool: '', mergeTool: '', terminal: '' },
+      terminalFontFamily: '',
+      terminalFontSize: 13,
+      terminalHeight: 240
     },
 
     async boot(): Promise<void> {
@@ -811,6 +818,10 @@ export const useApp = create<AppState>((set, get) => {
 
     closeSettings(): void {
       set({ settingsOpen: false })
+    },
+
+    toggleTerminal(): void {
+      set({ terminalOpen: !get().terminalOpen })
     },
 
     async refreshUndo(): Promise<void> {
