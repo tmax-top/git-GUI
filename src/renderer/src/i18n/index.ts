@@ -448,6 +448,17 @@ export const zh = {
   'profile.empty': '暂无保存的身份配置',
   'profile.deleteConfirm': '确定删除身份「{name}」？',
 
+  'palette.title': '命令面板',
+  'palette.placeholder': '输入命令或操作…',
+  'palette.empty': '未找到匹配的命令',
+  'palette.hint': '↑↓ 导航 · Enter 确认 · Esc 关闭',
+
+  'shortcuts.title': '全局快捷键',
+  'shortcuts.category.general': '全局与通用',
+  'shortcuts.category.navigation': '导航与面板',
+  'shortcuts.category.git': 'Git 操作',
+  'shortcuts.category.rebase': '交互式变基',
+
   'error.notRepo': '不是 git 仓库',
   'error.generic': '操作失败'
 }
@@ -901,6 +912,17 @@ export const en = {
   'profile.clearActive': 'Use Git system default',
   'profile.empty': 'No profiles configured yet',
   'profile.deleteConfirm': 'Delete profile "{name}"?',
+
+  'palette.title': 'Command Palette',
+  'palette.placeholder': 'Type a command or action…',
+  'palette.empty': 'No matching commands',
+  'palette.hint': '↑↓ navigate · Enter select · Esc close',
+
+  'shortcuts.title': 'Keyboard Shortcuts',
+  'shortcuts.category.general': 'General',
+  'shortcuts.category.navigation': 'Navigation & Panels',
+  'shortcuts.category.git': 'Git Operations',
+  'shortcuts.category.rebase': 'Interactive Rebase',
 
   'error.notRepo': 'Not a git repository',
   'error.generic': 'Operation failed'

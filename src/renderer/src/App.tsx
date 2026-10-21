@@ -3,6 +3,8 @@ import { useApp } from './store'
 import { StartPage } from './layout/StartPage'
 import { AppShell } from './layout/AppShell'
 import { WorkspaceModal } from './workspaces/WorkspaceModal'
+import { CommandPalette } from './palette/CommandPalette'
+import { ShortcutsModal } from './palette/ShortcutsModal'
 import { t } from './i18n'
 
 export default function App(): React.JSX.Element {
@@ -50,6 +52,16 @@ export default function App(): React.JSX.Element {
         e.preventDefault()
         useApp.getState().toggleTerminal()
       }
+      // Command Palette: Cmd/Ctrl+K or Cmd/Ctrl+P
+      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'k' || e.key.toLowerCase() === 'p')) {
+        e.preventDefault()
+        useApp.getState().toggleCommandPalette()
+      }
+      // Keyboard shortcuts modal: Cmd/Ctrl+/
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault()
+        useApp.getState().openShortcutsModal()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -87,6 +99,8 @@ export default function App(): React.JSX.Element {
     <div className="theme-white">
       {view === 'repo' ? <AppShell /> : <StartPage />}
       <WorkspaceModal />
+      <CommandPalette />
+      <ShortcutsModal />
     </div>
   )
 }

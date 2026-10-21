@@ -25,6 +25,8 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const openSearch = useApp((s) => s.openSearch)
   const openSettings = useApp((s) => s.openSettings)
   const openWorkspaceModal = useApp((s) => s.openWorkspaceModal)
+  const openCommandPalette = useApp((s) => s.openCommandPalette)
+  const openShortcutsModal = useApp((s) => s.openShortcutsModal)
   const terminalOpen = useApp((s) => s.terminalOpen)
   const toggleTerminal = useApp((s) => s.toggleTerminal)
   const prPanelOpen = useApp((s) => s.prPanelOpen)
@@ -186,6 +188,24 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
       >
         {settings.theme === 'dark' ? '🌙' : '☀️'}
       </button>
+      <button
+        className="rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800 font-mono"
+        onClick={openCommandPalette}
+        title={`${t('palette.title')} (⌘K)`}
+        data-testid="toolbar-palette"
+      >
+        ⌘K
+      </button>
+
+      <button
+        className="rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800"
+        onClick={openShortcutsModal}
+        title={`${t('shortcuts.title')} (⌘/)`}
+        data-testid="toolbar-shortcuts"
+      >
+        ?
+      </button>
+
       <button
         className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
         onClick={() => openSettings()}

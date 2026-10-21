@@ -130,6 +130,10 @@ interface AppState {
   prFilter: PrState | 'all'
   /** Workspaces manager modal visibility. */
   workspaceModalOpen: boolean
+  /** Command palette modal visibility. */
+  paletteOpen: boolean
+  /** Shortcuts cheatsheet modal visibility. */
+  shortcutsOpen: boolean
   /** Undo/redo stack state for the open repo (owned by the main process). */
   undoInfo: UndoStackStateDto
 
@@ -201,6 +205,12 @@ interface AppState {
   updateProfile(id: string, patch: Partial<Omit<ProfileDto, 'id'>>): Promise<void>
   deleteProfile(id: string): Promise<void>
   setActiveProfile(id: string | null): Promise<void>
+
+  openCommandPalette(): void
+  closeCommandPalette(): void
+  toggleCommandPalette(): void
+  openShortcutsModal(): void
+  closeShortcutsModal(): void
 
   refreshUndo(): Promise<void>
   undo(): Promise<void>
@@ -416,6 +426,8 @@ export const useApp = create<AppState>((set, get) => {
     activePrLoading: false,
     prFilter: 'open',
     workspaceModalOpen: false,
+    paletteOpen: false,
+    shortcutsOpen: false,
     undoInfo: { canUndo: false, canRedo: false },
     settings: {
       favorites: [],
@@ -1145,6 +1157,26 @@ export const useApp = create<AppState>((set, get) => {
 
     async setActiveProfile(id: string | null): Promise<void> {
       await get().updateSettings({ activeProfileId: id })
+    },
+
+    openCommandPalette(): void {
+      set({ paletteOpen: true })
+    },
+
+    closeCommandPalette(): void {
+      set({ paletteOpen: false })
+    },
+
+    toggleCommandPalette(): void {
+      set({ paletteOpen: !get().paletteOpen })
+    },
+
+    openShortcutsModal(): void {
+      set({ shortcutsOpen: true })
+    },
+
+    closeShortcutsModal(): void {
+      set({ shortcutsOpen: false })
     },
 
     async refreshUndo(): Promise<void> {
