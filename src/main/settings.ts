@@ -1,6 +1,7 @@
 import { app } from 'electron'
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { setActiveProfileConfig } from './git/exec'
 
 export interface FavoriteRepo {
   name: string
@@ -44,6 +45,10 @@ export interface AppSettings {
   workspaces: import('../shared/ipc').WorkspaceDto[]
   /** Active workspace ID, or null. */
   activeWorkspaceId: string | null
+  /** Git identity profiles. */
+  profiles: import('../shared/ipc').ProfileDto[]
+  /** Active profile ID, or null. */
+  activeProfileId: string | null
 }
 
 export interface SessionState {
@@ -72,7 +77,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   terminalHeight: 240,
   providerAccounts: [],
   workspaces: [],
-  activeWorkspaceId: null
+  activeWorkspaceId: null,
+  profiles: [],
+  activeProfileId: null
 }
 
 const DEFAULT_SESSION: SessionState = {
@@ -107,11 +114,27 @@ async function writeJson(file: string, value: unknown): Promise<void> {
   await writeFile(file, JSON.stringify(value, null, 2), 'utf8')
 }
 
-export function loadSettings(): Promise<AppSettings> {
-  return readJson(settingsFile(), DEFAULT_SETTINGS)
+export function syncProfileConfig(settings: AppSettings): void {
+  const active = (settings.profiles ?? []).find((p) => p.id === settings.activeProfileId)
+  if (active) {
+    setActiveProfileConfig({
+      name: active.authorName,
+      email: active.authorEmail,
+      signingKey: active.signingKey
+    })
+  } else {
+    setActiveProfileConfig(null)
+  }
+}
+
+export async function loadSettings(): Promise<AppSettings> {
+  const s = await readJson(settingsFile(), DEFAULT_SETTINGS)
+  syncProfileConfig(s)
+  return s
 }
 
 export function saveSettings(settings: AppSettings): Promise<void> {
+  syncProfileConfig(settings)
   return writeJson(settingsFile(), settings)
 }
 

@@ -22,7 +22,8 @@ import type {
   PullRequestDto,
   RepoRef,
   PrState,
-  WorkspaceDto
+  WorkspaceDto,
+  ProfileDto
 } from '@shared/ipc'
 import { isUntracked, stagedFiles, untrackedFiles } from '@shared/status'
 import { setLocale, t, tf, type Locale, type MessageKey } from './i18n'
@@ -194,6 +195,11 @@ interface AppState {
   setActiveWorkspace(id: string | null): Promise<void>
   addRepoToWorkspace(workspaceId: string, repoPath: string): Promise<void>
   removeRepoFromWorkspace(workspaceId: string, repoPath: string): Promise<void>
+
+  createProfile(name: string, authorName: string, authorEmail: string, signingKey?: string): Promise<ProfileDto>
+  updateProfile(id: string, patch: Partial<Omit<ProfileDto, 'id'>>): Promise<void>
+  deleteProfile(id: string): Promise<void>
+  setActiveProfile(id: string | null): Promise<void>
 
   refreshUndo(): Promise<void>
   undo(): Promise<void>
@@ -431,7 +437,9 @@ export const useApp = create<AppState>((set, get) => {
       terminalHeight: 240,
       providerAccounts: [],
       workspaces: [],
-      activeWorkspaceId: null
+      activeWorkspaceId: null,
+      profiles: [],
+      activeProfileId: null
     },
 
     async boot(): Promise<void> {
@@ -1087,6 +1095,48 @@ export const useApp = create<AppState>((set, get) => {
         return { ...w, repoPaths: w.repoPaths.filter((p) => p !== repoPath), updatedAt: now }
       })
       await get().updateSettings({ workspaces: updated })
+    },
+
+    async createProfile(
+      name: string,
+      authorName: string,
+      authorEmail: string,
+      signingKey?: string
+    ): Promise<ProfileDto> {
+      const p: ProfileDto = {
+        id: crypto.randomUUID().replace(/-/g, '').slice(0, 16),
+        name: name.trim(),
+        authorName: authorName.trim(),
+        authorEmail: authorEmail.trim(),
+        signingKey: signingKey?.trim() || undefined
+      }
+      const existing = get().settings.profiles ?? []
+      await get().updateSettings({
+        profiles: [...existing, p],
+        activeProfileId: get().settings.activeProfileId ?? p.id
+      })
+      return p
+    },
+
+    async updateProfile(
+      id: string,
+      patch: Partial<Omit<ProfileDto, 'id'>>
+    ): Promise<void> {
+      const existing = get().settings.profiles ?? []
+      const updated = existing.map((p) => (p.id === id ? { ...p, ...patch } : p))
+      await get().updateSettings({ profiles: updated })
+    },
+
+    async deleteProfile(id: string): Promise<void> {
+      const existing = get().settings.profiles ?? []
+      const filtered = existing.filter((p) => p.id !== id)
+      const nextActive =
+        get().settings.activeProfileId === id ? null : get().settings.activeProfileId
+      await get().updateSettings({ profiles: filtered, activeProfileId: nextActive })
+    },
+
+    async setActiveProfile(id: string | null): Promise<void> {
+      await get().updateSettings({ activeProfileId: id })
     },
 
     async refreshUndo(): Promise<void> {

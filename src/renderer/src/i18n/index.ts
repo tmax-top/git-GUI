@@ -431,6 +431,19 @@ export const zh = {
   'workspace.active': '当前工作区',
   'workspace.deleteConfirm': '确定删除工作区「{name}」？（不会删除任何本地代码）',
 
+  'profile.title': 'Git 身份 (Profiles)',
+  'profile.new': '新建身份',
+  'profile.name': '身份名称',
+  'profile.namePlaceholder': '例如: 工作 / 个人',
+  'profile.authorName': '作者名 (user.name)',
+  'profile.authorEmail': '作者邮箱 (user.email)',
+  'profile.signingKey': '签名密钥 (user.signingkey, 可选)',
+  'profile.active': '当前使用的身份',
+  'profile.setActive': '设为当前身份',
+  'profile.clearActive': '使用 Git 全局默认身份',
+  'profile.empty': '暂无保存的身份配置',
+  'profile.deleteConfirm': '确定删除身份「{name}」？',
+
   'error.notRepo': '不是 git 仓库',
   'error.generic': '操作失败'
 }
@@ -867,6 +880,19 @@ export const en = {
   'workspace.switch': 'Switch workspace',
   'workspace.active': 'Active workspace',
   'workspace.deleteConfirm': 'Delete workspace "{name}"? (Local files will not be deleted)',
+
+  'profile.title': 'Git Profiles',
+  'profile.new': 'New profile',
+  'profile.name': 'Profile name',
+  'profile.namePlaceholder': 'e.g. Work / Personal',
+  'profile.authorName': 'Author name (user.name)',
+  'profile.authorEmail': 'Author email (user.email)',
+  'profile.signingKey': 'Signing key (user.signingkey, optional)',
+  'profile.active': 'Active profile',
+  'profile.setActive': 'Set as active',
+  'profile.clearActive': 'Use Git system default',
+  'profile.empty': 'No profiles configured yet',
+  'profile.deleteConfirm': 'Delete profile "{name}"?',
 
   'error.notRepo': 'Not a git repository',
   'error.generic': 'Operation failed'

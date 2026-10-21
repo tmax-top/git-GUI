@@ -10,7 +10,7 @@ import type {
 } from '@shared/ipc'
 import { useApp } from '../store'
 import { t, tf, type MessageKey } from '../i18n'
-import { Modal, btnGhost, btnPrimary, inputClass } from '../components/Modal'
+import { Modal, btnDanger, btnGhost, btnPrimary, inputClass } from '../components/Modal'
 
 const INTERVALS = [0, 1, 5, 10, 15, 30, 60] as const
 
@@ -156,6 +156,7 @@ export function SettingsDialog(): React.JSX.Element {
         </div>
 
         <ActivityLog />
+        <ProfilesSection />
         <IntegrationsSection />
         <TerminalSection />
         <HooksSection />
@@ -486,6 +487,175 @@ function TerminalSection(): React.JSX.Element {
           {t('common.confirm')}
         </button>
       </label>
+    </div>
+  )
+}
+
+function ProfilesSection(): React.JSX.Element {
+  const settings = useApp((s) => s.settings)
+  const profiles = settings.profiles ?? []
+  const activeId = settings.activeProfileId
+  const createProfile = useApp((s) => s.createProfile)
+  const deleteProfile = useApp((s) => s.deleteProfile)
+  const setActiveProfile = useApp((s) => s.setActiveProfile)
+
+  const [name, setName] = useState('')
+  const [authorName, setAuthorName] = useState('')
+  const [authorEmail, setAuthorEmail] = useState('')
+  const [signingKey, setSigningKey] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleAdd = async (): Promise<void> => {
+    if (!name.trim() || !authorName.trim() || !authorEmail.trim()) {
+      setError('名称、作者名与邮箱为必填项')
+      return
+    }
+    setAdding(true)
+    setError(null)
+    try {
+      await createProfile(
+        name.trim(),
+        authorName.trim(),
+        authorEmail.trim(),
+        signingKey.trim() || undefined
+      )
+      setName('')
+      setAuthorName('')
+      setAuthorEmail('')
+      setSigningKey('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('error.generic'))
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3" data-testid="profiles-section">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-zinc-200">{t('profile.title')}</span>
+        {activeId && (
+          <button
+            className={btnGhost() + ' text-[11px]'}
+            onClick={() => void setActiveProfile(null)}
+            data-testid="profile-clear-active-btn"
+          >
+            {t('profile.clearActive')}
+          </button>
+        )}
+      </div>
+
+      {/* Profiles list */}
+      <div className="space-y-2">
+        {profiles.map((p) => (
+          <div
+            key={p.id}
+            className={`flex items-center justify-between rounded border p-3 text-xs transition ${
+              activeId === p.id
+                ? 'border-emerald-600/60 bg-emerald-950/20'
+                : 'border-zinc-800 bg-zinc-950'
+            }`}
+            data-testid={`profile-item-${p.id}`}
+          >
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-zinc-100">{p.name}</span>
+                {activeId === p.id && (
+                  <span className="rounded bg-emerald-900/60 px-1.5 py-0.2 text-[10px] text-emerald-400 font-medium">
+                    {t('profile.active')}
+                  </span>
+                )}
+              </div>
+              <span className="text-zinc-400">
+                {p.authorName} &lt;{p.authorEmail}&gt;
+              </span>
+              {p.signingKey && (
+                <span className="font-mono text-[10px] text-zinc-500">Key: {p.signingKey}</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {activeId !== p.id && (
+                <button
+                  className={btnPrimary() + ' text-[11px] px-2 py-1'}
+                  onClick={() => void setActiveProfile(p.id)}
+                  data-testid={`profile-set-active-${p.id}`}
+                >
+                  {t('profile.setActive')}
+                </button>
+              )}
+              <button
+                className={btnDanger() + ' text-[11px] px-2 py-1'}
+                onClick={() => {
+                  if (window.confirm(tf('profile.deleteConfirm', { name: p.name }))) {
+                    void deleteProfile(p.id)
+                  }
+                }}
+                data-testid={`profile-delete-${p.id}`}
+              >
+                {t('common.confirm')}
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {profiles.length === 0 && (
+          <div className="rounded border border-zinc-800 bg-zinc-950 p-4 text-center text-xs text-zinc-500">
+            {t('profile.empty')}
+          </div>
+        )}
+      </div>
+
+      {/* New profile form */}
+      <div className="flex flex-col gap-2 rounded border border-zinc-800 bg-zinc-900/40 p-3 text-xs">
+        <span className="font-semibold text-zinc-300">{t('profile.new')}</span>
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            className={inputClass()}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t('profile.namePlaceholder')}
+            data-testid="profile-name-input"
+          />
+          <input
+            className={inputClass()}
+            value={authorName}
+            onChange={(e) => setAuthorName(e.target.value)}
+            placeholder={t('profile.authorName')}
+            data-testid="profile-author-input"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            className={inputClass()}
+            value={authorEmail}
+            onChange={(e) => setAuthorEmail(e.target.value)}
+            placeholder={t('profile.authorEmail')}
+            data-testid="profile-email-input"
+          />
+          <input
+            className={inputClass()}
+            value={signingKey}
+            onChange={(e) => setSigningKey(e.target.value)}
+            placeholder={t('profile.signingKey')}
+            data-testid="profile-key-input"
+          />
+        </div>
+
+        {error && <div className="text-rose-400 text-[11px]">{error}</div>}
+
+        <div className="flex justify-end">
+          <button
+            className={btnPrimary()}
+            disabled={adding || !name.trim() || !authorName.trim() || !authorEmail.trim()}
+            onClick={() => void handleAdd()}
+            data-testid="profile-add-btn"
+          >
+            {adding ? '…' : t('profile.new')}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

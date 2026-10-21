@@ -128,6 +128,18 @@ export interface AppSettingsDto {
   workspaces: WorkspaceDto[]
   /** Active workspace ID, or null if showing all. */
   activeWorkspaceId: string | null
+  /** Git identity profiles (author name/email/signingKey) injected via -c. */
+  profiles: ProfileDto[]
+  /** Active profile ID, or null to use git defaults. */
+  activeProfileId: string | null
+}
+
+export interface ProfileDto {
+  id: string
+  name: string
+  authorName: string
+  authorEmail: string
+  signingKey?: string
 }
 
 export interface WorkspaceDto {
@@ -693,6 +705,14 @@ export const undoApplyRequestSchema = z.object({
 
 export const watchRequestSchema = z.object({ repoPath: repoPathSchema })
 
+export const profileDtoSchema = z.object({
+  id: z.string().min(1).max(64),
+  name: z.string().min(1).max(255),
+  authorName: z.string().min(1).max(255),
+  authorEmail: z.string().min(1).max(255),
+  signingKey: z.string().max(255).optional()
+})
+
 export const workspaceDtoSchema = z.object({
   id: z.string().min(1).max(64),
   name: z.string().min(1).max(255),
@@ -748,7 +768,9 @@ export const settingsPatchSchema = z.object({
     )
     .optional(),
   workspaces: z.array(workspaceDtoSchema).optional(),
-  activeWorkspaceId: z.string().max(64).nullable().optional()
+  activeWorkspaceId: z.string().max(64).nullable().optional(),
+  profiles: z.array(profileDtoSchema).optional(),
+  activeProfileId: z.string().max(64).nullable().optional()
 })
 
 /** Read back recent activity-log entries (newest first). */

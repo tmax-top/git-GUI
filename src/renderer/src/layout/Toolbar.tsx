@@ -36,6 +36,9 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const activeWorkspace = (settings.workspaces ?? []).find(
     (w) => w.id === settings.activeWorkspaceId
   )
+  const activeProfile = (settings.profiles ?? []).find(
+    (p) => p.id === settings.activeProfileId
+  )
 
   const disabled = sync !== null
 
@@ -139,6 +142,16 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
       >
         {activeWorkspace ? `📁 ${activeWorkspace.name}` : '📁'}
       </button>
+
+      {activeProfile && (
+        <span
+          className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-emerald-400 font-mono"
+          title={`${t('profile.active')}: ${activeProfile.name} (${activeProfile.authorName} <${activeProfile.authorEmail}>)`}
+          data-testid="toolbar-profile"
+        >
+          👤 {activeProfile.name}
+        </span>
+      )}
 
       <button
         className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800"

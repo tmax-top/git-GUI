@@ -34,9 +34,32 @@ export function gitBin(): string {
   return process.env.GIT_GUI_GIT_PATH || 'git'
 }
 
+export interface ActiveProfileConfig {
+  name?: string
+  email?: string
+  signingKey?: string
+}
+
+let activeProfileConfig: ActiveProfileConfig | null = null
+
+export function setActiveProfileConfig(cfg: ActiveProfileConfig | null): void {
+  activeProfileConfig = cfg
+}
+
+export function getActiveProfileConfig(): ActiveProfileConfig | null {
+  return activeProfileConfig
+}
+
 export function execGit(opts: GitExecOptions): Promise<GitExecResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(gitBin(), ['-c', 'core.quotepath=false', ...opts.args], {
+    const profileArgs: string[] = []
+    if (activeProfileConfig) {
+      if (activeProfileConfig.name) profileArgs.push('-c', `user.name=${activeProfileConfig.name}`)
+      if (activeProfileConfig.email) profileArgs.push('-c', `user.email=${activeProfileConfig.email}`)
+      if (activeProfileConfig.signingKey) profileArgs.push('-c', `user.signingkey=${activeProfileConfig.signingKey}`)
+    }
+
+    const child = spawn(gitBin(), ['-c', 'core.quotepath=false', ...profileArgs, ...opts.args], {
       cwd: opts.cwd,
       env: {
         ...process.env,
