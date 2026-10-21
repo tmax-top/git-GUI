@@ -21,7 +21,8 @@ import type {
   PullRequestDetailDto,
   PullRequestDto,
   RepoRef,
-  PrState
+  PrState,
+  WorkspaceDto
 } from '@shared/ipc'
 import { isUntracked, stagedFiles, untrackedFiles } from '@shared/status'
 import { setLocale, t, tf, type Locale, type MessageKey } from './i18n'
@@ -125,6 +126,8 @@ interface AppState {
   activePrDetail: PullRequestDetailDto | null
   activePrLoading: boolean
   prFilter: PrState | 'all'
+  /** Workspaces manager modal visibility. */
+  workspaceModalOpen: boolean
   /** Undo/redo stack state for the open repo (owned by the main process). */
   undoInfo: UndoStackStateDto
 
@@ -182,6 +185,16 @@ interface AppState {
   checkoutPr(branch: string): Promise<void>
   connectProviderPat(provider: ProviderKind, token: string, org?: string): Promise<ProviderAccountDto>
   disconnectProvider(provider: ProviderKind): Promise<void>
+
+  openWorkspaceModal(): void
+  closeWorkspaceModal(): void
+  createWorkspace(name: string, description?: string, repoPaths?: string[]): Promise<WorkspaceDto>
+  updateWorkspace(id: string, patch: Partial<Omit<WorkspaceDto, 'id' | 'createdAt'>>): Promise<void>
+  deleteWorkspace(id: string): Promise<void>
+  setActiveWorkspace(id: string | null): Promise<void>
+  addRepoToWorkspace(workspaceId: string, repoPath: string): Promise<void>
+  removeRepoFromWorkspace(workspaceId: string, repoPath: string): Promise<void>
+
   refreshUndo(): Promise<void>
   undo(): Promise<void>
   redo(): Promise<void>
@@ -395,6 +408,7 @@ export const useApp = create<AppState>((set, get) => {
     activePrDetail: null,
     activePrLoading: false,
     prFilter: 'open',
+    workspaceModalOpen: false,
     undoInfo: { canUndo: false, canRedo: false },
     settings: {
       favorites: [],
@@ -415,7 +429,9 @@ export const useApp = create<AppState>((set, get) => {
       terminalFontFamily: '',
       terminalFontSize: 13,
       terminalHeight: 240,
-      providerAccounts: []
+      providerAccounts: [],
+      workspaces: [],
+      activeWorkspaceId: null
     },
 
     async boot(): Promise<void> {
@@ -998,6 +1014,79 @@ export const useApp = create<AppState>((set, get) => {
       await window.api.providerDisconnect({ provider })
       const settings = await window.api.settingsGet()
       set({ settings })
+    },
+
+    openWorkspaceModal(): void {
+      set({ workspaceModalOpen: true })
+    },
+
+    closeWorkspaceModal(): void {
+      set({ workspaceModalOpen: false })
+    },
+
+    async createWorkspace(
+      name: string,
+      description?: string,
+      repoPaths: string[] = []
+    ): Promise<WorkspaceDto> {
+      const now = new Date().toISOString()
+      const ws: WorkspaceDto = {
+        id: crypto.randomUUID().replace(/-/g, '').slice(0, 16),
+        name: name.trim(),
+        description: description?.trim() || undefined,
+        repoPaths,
+        createdAt: now,
+        updatedAt: now
+      }
+      const existing = get().settings.workspaces ?? []
+      await get().updateSettings({
+        workspaces: [...existing, ws],
+        activeWorkspaceId: get().settings.activeWorkspaceId ?? ws.id
+      })
+      return ws
+    },
+
+    async updateWorkspace(
+      id: string,
+      patch: Partial<Omit<WorkspaceDto, 'id' | 'createdAt'>>
+    ): Promise<void> {
+      const existing = get().settings.workspaces ?? []
+      const now = new Date().toISOString()
+      const updated = existing.map((w) => (w.id === id ? { ...w, ...patch, updatedAt: now } : w))
+      await get().updateSettings({ workspaces: updated })
+    },
+
+    async deleteWorkspace(id: string): Promise<void> {
+      const existing = get().settings.workspaces ?? []
+      const filtered = existing.filter((w) => w.id !== id)
+      const nextActive =
+        get().settings.activeWorkspaceId === id ? null : get().settings.activeWorkspaceId
+      await get().updateSettings({ workspaces: filtered, activeWorkspaceId: nextActive })
+    },
+
+    async setActiveWorkspace(id: string | null): Promise<void> {
+      await get().updateSettings({ activeWorkspaceId: id })
+    },
+
+    async addRepoToWorkspace(workspaceId: string, repoPath: string): Promise<void> {
+      const existing = get().settings.workspaces ?? []
+      const now = new Date().toISOString()
+      const updated = existing.map((w) => {
+        if (w.id !== workspaceId) return w
+        if (w.repoPaths.includes(repoPath)) return w
+        return { ...w, repoPaths: [...w.repoPaths, repoPath], updatedAt: now }
+      })
+      await get().updateSettings({ workspaces: updated })
+    },
+
+    async removeRepoFromWorkspace(workspaceId: string, repoPath: string): Promise<void> {
+      const existing = get().settings.workspaces ?? []
+      const now = new Date().toISOString()
+      const updated = existing.map((w) => {
+        if (w.id !== workspaceId) return w
+        return { ...w, repoPaths: w.repoPaths.filter((p) => p !== repoPath), updatedAt: now }
+      })
+      await get().updateSettings({ workspaces: updated })
     },
 
     async refreshUndo(): Promise<void> {

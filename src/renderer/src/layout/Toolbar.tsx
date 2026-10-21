@@ -24,6 +24,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const closeRepo = useApp((s) => s.closeRepo)
   const openSearch = useApp((s) => s.openSearch)
   const openSettings = useApp((s) => s.openSettings)
+  const openWorkspaceModal = useApp((s) => s.openWorkspaceModal)
   const terminalOpen = useApp((s) => s.terminalOpen)
   const toggleTerminal = useApp((s) => s.toggleTerminal)
   const prPanelOpen = useApp((s) => s.prPanelOpen)
@@ -31,6 +32,10 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const undoInfo = useApp((s) => s.undoInfo)
   const undo = useApp((s) => s.undo)
   const redo = useApp((s) => s.redo)
+
+  const activeWorkspace = (settings.workspaces ?? []).find(
+    (w) => w.id === settings.activeWorkspaceId
+  )
 
   const disabled = sync !== null
 
@@ -124,6 +129,15 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
         data-testid="toolbar-pr"
       >
         PR
+      </button>
+
+      <button
+        className={`rounded px-2 py-1 text-xs ${activeWorkspace ? 'bg-zinc-800 text-sky-400 font-medium' : 'text-zinc-400 hover:bg-zinc-800'}`}
+        onClick={openWorkspaceModal}
+        title={activeWorkspace ? `${t('workspace.active')}: ${activeWorkspace.name}` : t('workspace.manage')}
+        data-testid="toolbar-workspace-btn"
+      >
+        {activeWorkspace ? `📁 ${activeWorkspace.name}` : '📁'}
       </button>
 
       <button

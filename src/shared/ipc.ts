@@ -124,6 +124,19 @@ export interface AppSettingsDto {
   terminalHeight: number
   /** Connected GitProvider accounts. */
   providerAccounts: import('./providers').ProviderAccountDto[]
+  /** Workspaces grouping multiple repositories. */
+  workspaces: WorkspaceDto[]
+  /** Active workspace ID, or null if showing all. */
+  activeWorkspaceId: string | null
+}
+
+export interface WorkspaceDto {
+  id: string
+  name: string
+  description?: string
+  repoPaths: string[]
+  createdAt: string
+  updatedAt: string
 }
 
 /** Command lines for opening files/repos in external tools. */
@@ -680,6 +693,15 @@ export const undoApplyRequestSchema = z.object({
 
 export const watchRequestSchema = z.object({ repoPath: repoPathSchema })
 
+export const workspaceDtoSchema = z.object({
+  id: z.string().min(1).max(64),
+  name: z.string().min(1).max(255),
+  description: z.string().max(1024).optional(),
+  repoPaths: z.array(repoPathSchema).max(200),
+  createdAt: z.string().max(64),
+  updatedAt: z.string().max(64)
+})
+
 export const settingsPatchSchema = z.object({
   favorites: z
     .array(
@@ -724,7 +746,9 @@ export const settingsPatchSchema = z.object({
         createdAt: z.string().max(64)
       })
     )
-    .optional()
+    .optional(),
+  workspaces: z.array(workspaceDtoSchema).optional(),
+  activeWorkspaceId: z.string().max(64).nullable().optional()
 })
 
 /** Read back recent activity-log entries (newest first). */

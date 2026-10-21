@@ -9,7 +9,9 @@ export function StartPage(): React.JSX.Element {
   const settings = useApp((s) => s.settings)
   const updateSettings = useApp((s) => s.updateSettings)
   const openRepo = useApp((s) => s.openRepo)
+  const openWorkspaceModal = useApp((s) => s.openWorkspaceModal)
   const error = useApp((s) => s.error)
+  const workspaces = settings.workspaces ?? []
   const [cloneOpen, setCloneOpen] = useState(false)
   const [initOpen, setInitOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -84,11 +86,63 @@ export function StartPage(): React.JSX.Element {
         <button className={btnGhost() + ' px-5 py-2.5'} onClick={() => setInitOpen(true)}>
           {t('start.init')}
         </button>
+        <button
+          className={btnGhost() + ' px-5 py-2.5'}
+          onClick={openWorkspaceModal}
+          data-testid="start-workspace-btn"
+        >
+          {t('workspace.title')}
+        </button>
       </div>
 
       {error && <div className="max-w-xl text-center text-sm text-rose-400">{error}</div>}
 
       <div className="w-full max-w-2xl space-y-6">
+        {workspaces.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                {t('workspace.title')}
+              </h3>
+              <button
+                className="text-xs text-sky-400 hover:underline"
+                onClick={openWorkspaceModal}
+              >
+                {t('workspace.manage')}
+              </button>
+            </div>
+            <div className="space-y-2">
+              {workspaces.map((w) => (
+                <div
+                  key={w.id}
+                  className="rounded border border-zinc-800 bg-zinc-900/60 p-3"
+                  data-testid={`start-workspace-${w.id}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-zinc-200">{w.name}</span>
+                    <span className="text-[11px] text-zinc-500">{w.repoPaths.length} 个仓库</span>
+                  </div>
+                  {w.repoPaths.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {w.repoPaths.map((p) => (
+                        <button
+                          key={p}
+                          className="flex items-center justify-between rounded bg-zinc-950 px-3 py-2 text-left text-xs hover:bg-zinc-800"
+                          onClick={() => void openRepo(p)}
+                        >
+                          <span className="truncate text-zinc-200 font-medium">{basename(p)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-zinc-600">{t('workspace.noRepos')}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {settings.favorites.length > 0 && (
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">

@@ -40,6 +40,10 @@ export interface AppSettings {
   terminalHeight: number
   /** Connected GitProvider accounts (GitHub, Azure DevOps); tokens stored in secrets. */
   providerAccounts: import('../shared/providers').ProviderAccountDto[]
+  /** Workspaces grouping multiple repositories. */
+  workspaces: import('../shared/ipc').WorkspaceDto[]
+  /** Active workspace ID, or null. */
+  activeWorkspaceId: string | null
 }
 
 export interface SessionState {
@@ -66,7 +70,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   terminalFontFamily: '',
   terminalFontSize: 13,
   terminalHeight: 240,
-  providerAccounts: []
+  providerAccounts: [],
+  workspaces: [],
+  activeWorkspaceId: null
 }
 
 const DEFAULT_SESSION: SessionState = {

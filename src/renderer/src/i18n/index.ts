@@ -414,6 +414,23 @@ export const zh = {
   'pr.notSupported': '当前仓库未关联 GitHub 或 Azure DevOps 远程仓库。',
   'pr.connectGuide': '请在「设置 → 集成」中配置对应平台的 PAT 令牌。',
 
+  'workspace.title': 'Workspaces (工作区)',
+  'workspace.manage': '管理工作区',
+  'workspace.new': '新建工作区',
+  'workspace.name': '工作区名称',
+  'workspace.namePlaceholder': '例如: 核心微服务',
+  'workspace.desc': '描述 (可选)',
+  'workspace.descPlaceholder': '工作区分组说明…',
+  'workspace.empty': '暂无工作区',
+  'workspace.repos': '包含的仓库',
+  'workspace.addRepo': '添加仓库',
+  'workspace.removeRepo': '从工作区移除',
+  'workspace.noRepos': '此工作区暂未添加仓库',
+  'workspace.all': '全部仓库',
+  'workspace.switch': '切换工作区',
+  'workspace.active': '当前工作区',
+  'workspace.deleteConfirm': '确定删除工作区「{name}」？（不会删除任何本地代码）',
+
   'error.notRepo': '不是 git 仓库',
   'error.generic': '操作失败'
 }
@@ -833,6 +850,23 @@ export const en = {
   'pr.draft': 'Create as draft PR',
   'pr.notSupported': 'Current repository is not linked to a GitHub or Azure DevOps remote.',
   'pr.connectGuide': 'Please configure a PAT for this platform in Settings → Integrations.',
+
+  'workspace.title': 'Workspaces',
+  'workspace.manage': 'Manage workspaces',
+  'workspace.new': 'New workspace',
+  'workspace.name': 'Workspace name',
+  'workspace.namePlaceholder': 'e.g. Core Services',
+  'workspace.desc': 'Description (optional)',
+  'workspace.descPlaceholder': 'Workspace description…',
+  'workspace.empty': 'No workspaces yet',
+  'workspace.repos': 'Repositories',
+  'workspace.addRepo': 'Add repository',
+  'workspace.removeRepo': 'Remove from workspace',
+  'workspace.noRepos': 'No repositories in this workspace',
+  'workspace.all': 'All repositories',
+  'workspace.switch': 'Switch workspace',
+  'workspace.active': 'Active workspace',
+  'workspace.deleteConfirm': 'Delete workspace "{name}"? (Local files will not be deleted)',
 
   'error.notRepo': 'Not a git repository',
   'error.generic': 'Operation failed'

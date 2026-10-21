@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useApp } from './store'
 import { StartPage } from './layout/StartPage'
 import { AppShell } from './layout/AppShell'
+import { WorkspaceModal } from './workspaces/WorkspaceModal'
 import { t } from './i18n'
 
 export default function App(): React.JSX.Element {
@@ -82,5 +83,10 @@ export default function App(): React.JSX.Element {
     )
   }
 
-  return <div className="theme-white">{view === 'repo' ? <AppShell /> : <StartPage />}</div>
+  return (
+    <div className="theme-white">
+      {view === 'repo' ? <AppShell /> : <StartPage />}
+      <WorkspaceModal />
+    </div>
+  )
 }
