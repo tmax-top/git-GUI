@@ -66,7 +66,8 @@ export function openExternalTool(
     const child = spawn(bin, rest, {
       cwd: vars.path ? undefined : vars.repo,
       detached: true,
-      stdio: 'ignore'
+      stdio: 'ignore',
+      windowsHide: true
     })
     child.on('error', (err) => reject(err))
     child.unref()

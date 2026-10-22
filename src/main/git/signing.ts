@@ -35,7 +35,7 @@ async function gitConfig(repoPath: string, key: string): Promise<string> {
 
 function probeBinary(bin: string, versionArgs: string[]): Promise<boolean> {
   return new Promise((resolve) => {
-    const child = spawn(bin, versionArgs, { stdio: 'ignore' })
+    const child = spawn(bin, versionArgs, { stdio: 'ignore', windowsHide: true })
     child.on('error', () => resolve(false))
     child.on('exit', (code) => resolve(code === 0))
   })

@@ -61,6 +61,7 @@ export function execGit(opts: GitExecOptions): Promise<GitExecResult> {
 
     const child = spawn(gitBin(), ['-c', 'core.quotepath=false', ...profileArgs, ...opts.args], {
       cwd: opts.cwd,
+      windowsHide: true,
       env: {
         ...process.env,
         ...opts.env,
