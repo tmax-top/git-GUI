@@ -193,7 +193,7 @@ export function PrPanel(): React.JSX.Element | null {
                   className="w-full rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 placeholder-zinc-500 focus:border-sky-500 focus:outline-none"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="搜索 PR..."
+                  placeholder={t('pr.searchPlaceholder')}
                   data-testid="pr-search-input"
                 />
               </div>
@@ -201,7 +201,7 @@ export function PrPanel(): React.JSX.Element | null {
               {/* PR list */}
               <div className="flex-1 overflow-y-auto divide-y divide-zinc-900">
                 {prLoading ? (
-                  <div className="p-4 text-center text-xs text-zinc-500">加载中…</div>
+                  <div className="p-4 text-center text-xs text-zinc-500">{t('common.loading')}</div>
                 ) : filteredPrs.length === 0 ? (
                   <div className="p-4 text-center text-xs text-zinc-600">{t('pr.noPrs')}</div>
                 ) : (
@@ -237,7 +237,7 @@ export function PrPanel(): React.JSX.Element | null {
             <div className="flex flex-1 flex-col overflow-y-auto bg-zinc-900/30">
               {activePrLoading ? (
                 <div className="flex flex-1 items-center justify-center text-xs text-zinc-500">
-                  加载详情中…
+                  {t('common.loading')}
                 </div>
               ) : !activePrDetail ? (
                 <div className="flex flex-1 items-center justify-center text-xs text-zinc-500">
@@ -259,7 +259,7 @@ export function PrPanel(): React.JSX.Element | null {
                           {stateBadge(activePrDetail.state, activePrDetail.draft)}
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
-                          <span>由 {activePrDetail.author.name} 创建</span>
+                          <span>{tf('pr.createdBy', { name: activePrDetail.author.name })}</span>
                           <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[11px] text-zinc-300">
                             {activePrDetail.sourceBranch} → {activePrDetail.targetBranch}
                           </span>
@@ -392,7 +392,7 @@ export function PrPanel(): React.JSX.Element | null {
                       /* Diff view */
                       <div className="rounded border border-zinc-800 bg-zinc-950 p-3">
                         <pre className="overflow-x-auto font-mono text-xs text-zinc-300 whitespace-pre">
-                          {activePrDetail.diff || '无差异内容'}
+                          {activePrDetail.diff || t('diff.empty')}
                         </pre>
                       </div>
                     )}

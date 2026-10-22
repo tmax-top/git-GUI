@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { t } from '../i18n'
+import { t, tf } from '../i18n'
 import { useApp } from '../store'
 
 export interface CommandItem {
@@ -53,7 +53,7 @@ export function CommandPalette(): React.JSX.Element | null {
     // 1. Repo commands
     list.push({
       id: 'repo:open',
-      title: '打开仓库 (Open Repository)',
+      title: t('start.open'),
       category: 'repo',
       shortcut: `${modKey}O`,
       action: async () => {
@@ -65,7 +65,7 @@ export function CommandPalette(): React.JSX.Element | null {
     if (view === 'repo' && repoPath) {
       list.push({
         id: 'repo:close',
-        title: '关闭当前仓库 (Close Repository)',
+        title: t('toolbar.close'),
         category: 'repo',
         action: () => void closeRepo()
       })
@@ -73,7 +73,7 @@ export function CommandPalette(): React.JSX.Element | null {
 
     list.push({
       id: 'repo:workspaces',
-      title: '管理工作区 (Manage Workspaces)',
+      title: t('workspace.manage'),
       category: 'repo',
       action: () => openWorkspaceModal()
     })
@@ -83,59 +83,59 @@ export function CommandPalette(): React.JSX.Element | null {
       list.push(
         {
           id: 'git:fetch',
-          title: '获取远端全部更新 (Fetch All)',
+          title: t('toolbar.fetch'),
           category: 'git',
           shortcut: `⇧${modKey}F`,
           action: () => void fetch_()
         },
         {
           id: 'git:pull',
-          title: '拉取当前分支 (Pull)',
+          title: t('toolbar.pull'),
           category: 'git',
           action: () => void pull(false)
         },
         {
           id: 'git:pull-rebase',
-          title: '拉取并变基 (Pull Rebase)',
+          title: t('sync.pullRebase'),
           category: 'git',
           action: () => void pull(true)
         },
         {
           id: 'git:push',
-          title: '推送当前分支 (Push)',
+          title: t('toolbar.push'),
           category: 'git',
           action: () => void push(false)
         },
         {
           id: 'git:push-force',
-          title: '强制推送 (Force Push with Lease)',
+          title: t('sync.forcePush'),
           category: 'git',
           action: () => void push(true)
         },
         {
           id: 'git:refresh',
-          title: '刷新仓库状态 (Refresh)',
+          title: t('toolbar.refresh'),
           category: 'git',
           shortcut: `${modKey}R`,
           action: () => void refreshAll()
         },
         {
           id: 'git:undo',
-          title: '撤销最近操作 (Undo)',
+          title: t('undo.undo'),
           category: 'git',
           shortcut: `${modKey}Z`,
           action: () => void undo()
         },
         {
           id: 'git:redo',
-          title: '重做操作 (Redo)',
+          title: t('undo.redo'),
           category: 'git',
           shortcut: `⇧${modKey}Z`,
           action: () => void redo()
         },
         {
           id: 'git:checkout',
-          title: '检出分支或提交 (Checkout Branch / Commit)',
+          title: `${t('menu.checkout')} (${t('prompt.branchName')})`,
           category: 'git',
           action: () => {
             setPrompt({
@@ -149,7 +149,7 @@ export function CommandPalette(): React.JSX.Element | null {
         },
         {
           id: 'git:tag-new',
-          title: '新建标签 (New Tag)',
+          title: t('prompt.tagTitle'),
           category: 'git',
           action: () => {
             setPrompt({
@@ -163,31 +163,31 @@ export function CommandPalette(): React.JSX.Element | null {
         },
         {
           id: 'git:stash-push',
-          title: '贮藏工作区更改 (Stash Changes)',
+          title: t('prompt.stashTitle'),
           category: 'git',
           action: () => void stashPush()
         },
         {
           id: 'git:stash-pop',
-          title: '应用并删除最近贮藏 (Stash Pop)',
+          title: t('menu.popStash'),
           category: 'git',
           action: () => void stashApply(undefined, true)
         },
         {
           id: 'git:pr-new',
-          title: '新建 Pull Request (New PR)',
+          title: t('pr.new'),
           category: 'git',
           action: () => openCreatePr()
         },
         {
           id: 'git:patch-export',
-          title: '导出当前更改为 Patch (Export Patch)',
+          title: t('patch.exportWip'),
           category: 'git',
           action: () => void exportPatch()
         },
         {
           id: 'git:patch-apply',
-          title: '导入并应用 Patch 文件 (Apply Patch)',
+          title: t('patch.apply'),
           category: 'git',
           action: () => openPatchModal()
         }
@@ -198,34 +198,34 @@ export function CommandPalette(): React.JSX.Element | null {
     list.push(
       {
         id: 'view:terminal',
-        title: '显示/隐藏终端面板 (Toggle Terminal)',
+        title: t('terminal.toggle'),
         category: 'view',
         shortcut: '⌃`',
         action: () => toggleTerminal()
       },
       {
         id: 'view:pr',
-        title: '显示/隐藏 Pull Requests 面板 (Toggle PR Panel)',
+        title: t('pr.toggle'),
         category: 'view',
         action: () => togglePrPanel()
       },
       {
         id: 'view:search',
-        title: '全局搜索 (Global Search)',
+        title: t('search.title'),
         category: 'view',
         shortcut: `${modKey}F`,
         action: () => openSearch()
       },
       {
         id: 'view:shortcuts',
-        title: '查看快捷键表 (Keyboard Shortcuts)',
+        title: t('shortcuts.title'),
         category: 'view',
         shortcut: `${modKey}/`,
         action: () => openShortcutsModal()
       },
       {
         id: 'view:settings',
-        title: '打开偏好设置 (Open Settings)',
+        title: t('settings.title'),
         category: 'view',
         shortcut: `${modKey},`,
         action: () => openSettings()
@@ -236,31 +236,31 @@ export function CommandPalette(): React.JSX.Element | null {
     list.push(
       {
         id: 'theme:dark',
-        title: '切换主题: 深色模式 (Dark Theme)',
+        title: `${t('settings.theme')}: ${t('settings.themeDark')}`,
         category: 'settings',
         action: () => void updateSettings({ theme: 'dark' })
       },
       {
         id: 'theme:light',
-        title: '切换主题: 浅色护眼 (Light Theme)',
+        title: `${t('settings.theme')}: ${t('settings.themeLight')}`,
         category: 'settings',
         action: () => void updateSettings({ theme: 'light' })
       },
       {
         id: 'theme:system',
-        title: '切换主题: 跟随系统 (System Theme)',
+        title: `${t('settings.theme')}: ${t('settings.themeSystem')}`,
         category: 'settings',
         action: () => void updateSettings({ theme: 'system' })
       },
       {
         id: 'lang:zh',
-        title: '切换语言: 中文 (Chinese)',
+        title: '中文 (Chinese)',
         category: 'settings',
         action: () => void updateSettings({ language: 'zh' })
       },
       {
         id: 'lang:en',
-        title: '切换语言: English',
+        title: 'English',
         category: 'settings',
         action: () => void updateSettings({ language: 'en' })
       }
@@ -333,13 +333,13 @@ export function CommandPalette(): React.JSX.Element | null {
   const categoryLabel = (cat: CommandItem['category']): string => {
     switch (cat) {
       case 'git':
-        return 'Git'
+        return t('palette.category.git')
       case 'repo':
-        return '项目'
+        return t('palette.category.repo')
       case 'view':
-        return '视图'
+        return t('palette.category.view')
       case 'settings':
-        return '设置'
+        return t('palette.category.settings')
     }
   }
 
@@ -417,7 +417,7 @@ export function CommandPalette(): React.JSX.Element | null {
         {/* Footer */}
         <div className="border-t border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-[10px] text-zinc-500 flex justify-between">
           <span>{t('palette.hint')}</span>
-          <span>{filtered.length} 项命令</span>
+          <span>{tf('palette.itemCount', { n: filtered.length })}</span>
         </div>
       </div>
     </div>

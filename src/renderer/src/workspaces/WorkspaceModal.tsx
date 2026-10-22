@@ -48,7 +48,7 @@ export function WorkspaceModal(): React.JSX.Element | null {
 
   const handleSave = async (): Promise<void> => {
     if (!name.trim()) {
-      setError('工作区名称不能为空')
+      setError(t('workspace.nameRequired'))
       return
     }
     setError(null)
@@ -171,14 +171,14 @@ export function WorkspaceModal(): React.JSX.Element | null {
                       onClick={() => void setActiveWorkspace(activeId === selectedWorkspace.id ? null : selectedWorkspace.id)}
                       data-testid="workspace-set-active-btn"
                     >
-                      {activeId === selectedWorkspace.id ? '取消激活' : '设为当前工作区'}
+                      {activeId === selectedWorkspace.id ? t('workspace.clearActive') : t('workspace.setActive')}
                     </button>
                     <button
                       className={btnDanger() + ' px-2 py-1 text-[11px]'}
                       onClick={() => void handleDelete(selectedWorkspace)}
                       data-testid="workspace-delete-btn"
                     >
-                      删除
+                      {t('common.delete')}
                     </button>
                   </div>
                 )}
@@ -253,7 +253,7 @@ export function WorkspaceModal(): React.JSX.Element | null {
                           className={btnPrimary() + ' px-2 py-0.5 text-[10px]'}
                           onClick={() => void handleOpenRepo(p)}
                         >
-                          打开
+                          {t('start.open')}
                         </button>
                         <button
                           className="rounded px-1.5 py-0.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
@@ -280,13 +280,13 @@ export function WorkspaceModal(): React.JSX.Element | null {
                   onClick={() => void handleSave()}
                   data-testid="workspace-save-btn"
                 >
-                  {isCreating ? t('common.confirm') : '保存变更'}
+                  {isCreating ? t('common.confirm') : t('common.saveChanges')}
                 </button>
               </div>
             </div>
           ) : (
             <div className="flex flex-1 items-center justify-center text-zinc-600">
-              请选择或创建一个工作区
+              {t('workspace.selectHint')}
             </div>
           )}
         </div>

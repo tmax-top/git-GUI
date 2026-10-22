@@ -29,7 +29,7 @@ export function ApplyPatchModal(): React.JSX.Element | null {
 
   const handleApply = async (): Promise<void> => {
     if (!filePath.trim() && !content.trim()) {
-      setError('请选择文件或粘贴补丁内容')
+      setError(t('patch.contentRequired'))
       return
     }
     setBusy(true)
@@ -93,7 +93,7 @@ export function ApplyPatchModal(): React.JSX.Element | null {
 
         <div className="flex items-center gap-2 text-zinc-500">
           <div className="flex-1 h-px bg-zinc-800" />
-          <span>或</span>
+          <span>{t('common.or')}</span>
           <div className="flex-1 h-px bg-zinc-800" />
         </div>
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../store'
-import { t } from '../i18n'
+import { t, tf } from '../i18n'
 import { btnGhost, btnPrimary } from '../components/Modal'
 import { basename, shortPath } from '../utils/format'
 import { CloneDialog, InitDialog } from './Dialogs'
@@ -128,7 +128,9 @@ export function StartPage(): React.JSX.Element {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-semibold text-zinc-200">{w.name}</span>
-                    <span className="text-[11px] text-zinc-500">{w.repoPaths.length} 个仓库</span>
+                    <span className="text-[11px] text-zinc-500">
+                      {tf('workspace.repoCount', { n: w.repoPaths.length })}
+                    </span>
                   </div>
                   {w.repoPaths.length > 0 ? (
                     <div className="grid grid-cols-2 gap-2">

@@ -534,7 +534,7 @@ function ProfilesSection(): React.JSX.Element {
 
   const handleAdd = async (): Promise<void> => {
     if (!name.trim() || !authorName.trim() || !authorEmail.trim()) {
-      setError('名称、作者名与邮箱为必填项')
+      setError(t('profile.fieldsRequired'))
       return
     }
     setAdding(true)

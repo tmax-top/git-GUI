@@ -25,36 +25,36 @@ export function ShortcutsModal(): React.JSX.Element | null {
     {
       title: t('shortcuts.category.general'),
       rows: [
-        { label: '命令面板 (Command Palette)', keys: [`${mod}K`, `${mod}P`] },
-        { label: '查看快捷键表 (Keyboard Shortcuts)', keys: [`${mod}/`] },
-        { label: '偏好设置 (Settings)', keys: [`${mod},`] }
+        { label: t('palette.title'), keys: [`${mod}K`, `${mod}P`] },
+        { label: t('shortcuts.title'), keys: [`${mod}/`] },
+        { label: t('settings.title'), keys: [`${mod},`] }
       ]
     },
     {
       title: t('shortcuts.category.navigation'),
       rows: [
-        { label: '全局搜索 (Global Search)', keys: [`${mod}F`] },
-        { label: '切换内嵌终端 (Toggle Terminal)', keys: ['⌃`'] },
-        { label: '刷新仓库状态 (Refresh)', keys: [`${mod}R`] },
-        { label: '打开仓库 (Open Repository)', keys: [`${mod}O`] }
+        { label: t('search.title'), keys: [`${mod}F`] },
+        { label: t('terminal.title'), keys: ['⌃`'] },
+        { label: t('toolbar.refresh'), keys: [`${mod}R`] },
+        { label: t('start.open'), keys: [`${mod}O`] }
       ]
     },
     {
       title: t('shortcuts.category.git'),
       rows: [
-        { label: '撤销最近操作 (Undo)', keys: [`${mod}Z`] },
-        { label: '重做操作 (Redo)', keys: [`⇧${mod}Z`] },
-        { label: '获取远端更新 (Fetch All)', keys: [`⇧${mod}F`] },
-        { label: '提交变更 (Commit)', keys: [`${mod}Enter`] }
+        { label: t('undo.undo'), keys: [`${mod}Z`] },
+        { label: t('undo.redo'), keys: [`⇧${mod}Z`] },
+        { label: t('toolbar.fetch'), keys: [`⇧${mod}F`] },
+        { label: t('panel.commit'), keys: [`${mod}Enter`] }
       ]
     },
     {
       title: t('shortcuts.category.rebase'),
       rows: [
-        { label: '保留此提交 (Pick)', keys: ['P'] },
-        { label: '修改提交信息 (Reword)', keys: ['R'] },
-        { label: '压缩并入上一提交 (Squash)', keys: ['S'] },
-        { label: '丢弃此提交 (Drop)', keys: ['D'] }
+        { label: 'Pick', keys: ['P'] },
+        { label: 'Reword', keys: ['R'] },
+        { label: 'Squash', keys: ['S'] },
+        { label: 'Drop', keys: ['D'] }
       ]
     }
   ]
