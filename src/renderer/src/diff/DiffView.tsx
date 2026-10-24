@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { DiffFile, DiffHunk, DiffLine } from '@shared/diff'
 import { commonAffix } from '@shared/diff'
 import { t } from '../i18n'
@@ -25,11 +25,16 @@ export function mimeFor(path: string): string {
 interface LinePair {
   minus: DiffLine | null
   plus: DiffLine | null
+  oldNum: number | null
+  newNum: number | null
 }
 
-function pairLines(lines: DiffLine[]): LinePair[] {
+function pairLines(hunk: DiffHunk): LinePair[] {
   const pairs: LinePair[] = []
+  let oldLine = hunk.oldStart
+  let newLine = hunk.newStart
   let i = 0
+  const lines = hunk.lines
   while (i < lines.length) {
     const line = lines[i]
     if (line.type === '-') {
@@ -39,13 +44,17 @@ function pairLines(lines: DiffLine[]): LinePair[] {
       while (i < lines.length && lines[i].type === '+') plusRun.push(lines[i++])
       const n = Math.max(minusRun.length, plusRun.length)
       for (let k = 0; k < n; k++) {
-        pairs.push({ minus: minusRun[k] ?? null, plus: plusRun[k] ?? null })
+        const minus = minusRun[k] ?? null
+        const plus = plusRun[k] ?? null
+        const oldNum = minus ? oldLine++ : null
+        const newNum = plus ? newLine++ : null
+        pairs.push({ minus, plus, oldNum, newNum })
       }
     } else if (line.type === '+') {
-      pairs.push({ minus: null, plus: line })
+      pairs.push({ minus: null, plus: line, oldNum: null, newNum: newLine++ })
       i++
     } else {
-      pairs.push({ minus: line, plus: line.type === ' ' ? line : null })
+      pairs.push({ minus: line, plus: line.type === ' ' ? line : null, oldNum: oldLine++, newNum: newLine++ })
       i++
     }
   }
@@ -87,6 +96,18 @@ function HunkView(props: {
   split: boolean
 }): React.JSX.Element {
   const { hunk, action, split, word } = props
+  const leftRef = useRef<HTMLDivElement>(null)
+  const rightRef = useRef<HTMLDivElement>(null)
+
+  // Both halves scroll horizontally in lockstep so old/new sides stay aligned.
+  const syncScroll = (from: 'left' | 'right'): void => {
+    const src = from === 'left' ? leftRef.current : rightRef.current
+    const dst = from === 'left' ? rightRef.current : leftRef.current
+    if (!src || !dst) return
+    if (Math.abs(src.scrollLeft - dst.scrollLeft) < 1) return
+    dst.scrollLeft = src.scrollLeft
+  }
+
   let newLine = hunk.newStart
   const oldNums: (number | null)[] = []
   const newNums: (number | null)[] = []
@@ -108,6 +129,7 @@ function HunkView(props: {
 
   const added = hunk.lines.filter((l) => l.type === '+').length
   const removed = hunk.lines.filter((l) => l.type === '-').length
+  const pairs = pairLines(hunk)
 
   return (
     <div className="my-2 overflow-hidden rounded border border-zinc-800 text-xs">
@@ -132,48 +154,68 @@ function HunkView(props: {
       </div>
 
       {split ? (
-        <div className="grid grid-cols-2 divide-x divide-zinc-800 font-mono leading-5">
-          <div>
-            {pairLines(hunk.lines).map((p, idx) => (
-              <div
-                key={idx}
-                className={`whitespace-pre ${
-                  p.minus && p.minus.type === '-'
-                    ? 'bg-rose-950/50 text-rose-100'
-                    : p.minus
-                      ? 'text-zinc-400'
-                      : 'bg-zinc-950/40'
-                }`}
-              >
-                <span className="mr-2 inline-block w-8 select-none text-right text-zinc-600" />
-                {p.minus
-                  ? p.minus.type === '-' && p.plus && p.plus.type === '+' && word
-                    ? <WordDiffText a={p.minus.content} b={p.plus.content} side="minus" />
-                    : (p.minus.content ?? '')
-                  : ''}
-              </div>
-            ))}
+        <div className="flex divide-x divide-zinc-800 font-mono leading-5">
+          <div
+            ref={leftRef}
+            className="w-1/2 min-w-0 overflow-x-auto"
+            onScroll={() => syncScroll('left')}
+          >
+            <div className="min-w-max">
+              {pairs.map((p, idx) => (
+                <div
+                  key={idx}
+                  className={`flex whitespace-pre ${
+                    p.minus && p.minus.type === '-'
+                      ? 'bg-rose-950/50 text-rose-100'
+                      : p.minus
+                        ? 'text-zinc-400'
+                        : 'bg-zinc-950/40'
+                  }`}
+                >
+                  <span className="w-12 shrink-0 select-none border-r border-zinc-800 px-1 text-right text-zinc-600">
+                    {p.oldNum ?? ''}
+                  </span>
+                  <span className="px-2">
+                    {p.minus
+                      ? p.minus.type === '-' && p.plus && p.plus.type === '+' && word
+                        ? <WordDiffText a={p.minus.content} b={p.plus.content} side="minus" />
+                        : (p.minus.content ?? '')
+                      : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div>
-            {pairLines(hunk.lines).map((p, idx) => (
-              <div
-                key={idx}
-                className={`whitespace-pre ${
-                  p.plus && p.plus.type === '+'
-                    ? 'bg-emerald-950/50 text-emerald-100'
-                    : p.plus
-                      ? 'text-zinc-400'
-                      : 'bg-zinc-950/40'
-                }`}
-              >
-                <span className="mr-2 inline-block w-8 select-none text-right text-zinc-600" />
-                {p.plus
-                  ? p.plus.type === '+' && p.minus && p.minus.type === '-' && word
-                    ? <WordDiffText a={p.plus.content} b={p.minus.content} side="plus" />
-                    : (p.plus.content ?? '')
-                  : ''}
-              </div>
-            ))}
+          <div
+            ref={rightRef}
+            className="w-1/2 min-w-0 overflow-x-auto"
+            onScroll={() => syncScroll('right')}
+          >
+            <div className="min-w-max">
+              {pairs.map((p, idx) => (
+                <div
+                  key={idx}
+                  className={`flex whitespace-pre ${
+                    p.plus && p.plus.type === '+'
+                      ? 'bg-emerald-950/50 text-emerald-100'
+                      : p.plus
+                        ? 'text-zinc-400'
+                        : 'bg-zinc-950/40'
+                  }`}
+                >
+                  <span className="w-12 shrink-0 select-none border-r border-zinc-800 px-1 text-right text-zinc-600">
+                    {p.newNum ?? ''}
+                  </span>
+                  <span className="px-2">
+                    {p.plus
+                      ? p.plus.type === '+' && p.minus && p.minus.type === '-' && word
+                        ? <WordDiffText a={p.plus.content} b={p.minus.content} side="plus" />
+                        : (p.plus.content ?? '')
+                      : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       ) : (
