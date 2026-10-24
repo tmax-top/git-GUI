@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useApp } from '../store'
-import { t } from '../i18n'
+import { t, tf } from '../i18n'
 import { Modal, btnGhost, btnPrimary, inputClass } from '../components/Modal'
 import { basename } from '../utils/format'
 import type { ProgressEventDto } from '@shared/ipc'
@@ -180,56 +180,82 @@ export function CloneDialog(props: { onClose: () => void }): React.JSX.Element {
 
         {activeTab !== 'url' && (
           <div className="space-y-2">
-            <input
-              className={inputClass()}
-              placeholder={t('clone.searchRepos')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              disabled={cloning}
-            />
+            <div className="flex gap-2 items-center">
+              <input
+                className={`${inputClass()} flex-1`}
+                placeholder={t('clone.searchRepos')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                disabled={cloning}
+              />
+              <button
+                type="button"
+                className={btnGhost() + ' px-2.5 py-1.5 text-xs shrink-0'}
+                onClick={() => {
+                  const acc = accounts.find((a) => a.provider === activeTab)
+                  if (acc) {
+                    setRemoteRepos((prev) => {
+                      const next = { ...prev }
+                      delete next[activeTab]
+                      return next
+                    })
+                    loadRepos(acc)
+                  }
+                }}
+                disabled={Boolean(loadingRepos[activeTab]) || cloning}
+                title={t('toolbar.refresh')}
+              >
+                ↻
+              </button>
+            </div>
             {loadingRepos[activeTab] && (
               <div className="py-6 text-center text-xs text-zinc-500">
                 {t('clone.loadingRepos')}
               </div>
             )}
             {!loadingRepos[activeTab] && (
-              <div className="max-h-48 overflow-y-auto space-y-1 rounded border border-zinc-800 bg-zinc-950 p-1">
-                {filteredRepos.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-zinc-500">
-                    {t('clone.emptyRepos')}
-                  </div>
-                ) : (
-                  filteredRepos.map((r) => {
-                    const isSelected = url === r.cloneUrl
-                    return (
-                      <div
-                        key={r.id}
-                        onClick={() => {
-                          setUrl(r.cloneUrl)
-                          setName(r.name)
-                        }}
-                        className={`flex cursor-pointer items-center justify-between rounded px-2.5 py-1.5 text-xs transition ${
-                          isSelected
-                            ? 'bg-emerald-950/60 border border-emerald-600/50 text-emerald-200'
-                            : 'hover:bg-zinc-900 text-zinc-300'
-                        }`}
-                      >
-                        <div className="flex flex-col min-w-0 pr-2">
-                          <span className="font-semibold truncate text-zinc-100">{r.fullName}</span>
-                          {r.description && (
-                            <span className="text-[11px] text-zinc-500 truncate">{r.description}</span>
+              <>
+                <div className="flex items-center justify-between px-1 text-[11px] text-zinc-500">
+                  <span>{tf('clone.reposFound', { count: String(filteredRepos.length) })}</span>
+                </div>
+                <div className="max-h-52 overflow-y-auto space-y-1 rounded border border-zinc-800 bg-zinc-950 p-1">
+                  {filteredRepos.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-zinc-500">
+                      {t('clone.emptyRepos')}
+                    </div>
+                  ) : (
+                    filteredRepos.slice(0, 100).map((r) => {
+                      const isSelected = url === r.cloneUrl
+                      return (
+                        <div
+                          key={r.id}
+                          onClick={() => {
+                            setUrl(r.cloneUrl)
+                            setName(r.name)
+                          }}
+                          className={`flex cursor-pointer items-center justify-between rounded px-2.5 py-1.5 text-xs transition ${
+                            isSelected
+                              ? 'bg-emerald-950/60 border border-emerald-600/50 text-emerald-200'
+                              : 'hover:bg-zinc-900 text-zinc-300'
+                          }`}
+                        >
+                          <div className="flex flex-col min-w-0 pr-2">
+                            <span className="font-semibold truncate text-zinc-100">{r.fullName}</span>
+                            {r.description && (
+                              <span className="text-[11px] text-zinc-500 truncate">{r.description}</span>
+                            )}
+                          </div>
+                          {r.defaultBranch && (
+                            <span className="shrink-0 rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] text-zinc-400 font-mono">
+                              {r.defaultBranch}
+                            </span>
                           )}
                         </div>
-                        {r.defaultBranch && (
-                          <span className="shrink-0 rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] text-zinc-400 font-mono">
-                            {r.defaultBranch}
-                          </span>
-                        )}
-                      </div>
-                    )
-                  })
-                )}
-              </div>
+                      )
+                    })
+                  )}
+                </div>
+              </>
             )}
           </div>
         )}
