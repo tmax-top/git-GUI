@@ -101,6 +101,9 @@ interface AppState {
   conflictLoading: boolean
   sync: SyncState | null
   error: string | null
+  errorDetailOpen: boolean
+  openErrorDetail(): void
+  closeErrorDetail(): void
   confirm: ConfirmState | null
   pushConflict: boolean
   settings: AppSettingsDto
@@ -246,8 +249,20 @@ interface AppState {
 }
 
 function errText(e: unknown): string {
-  if (e instanceof Error) return e.message
-  return String(e)
+  let msg = e instanceof Error ? e.message : String(e)
+  msg = msg.replace(/^Error invoking remote method '[^']+':\s*/, '')
+  msg = msg.replace(/^Error:\s*/, '')
+  msg = msg
+    .split('\n')
+    .filter((line) => {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('** WARNING: connection is not using a post-quantum key exchange algorithm')) return false
+      if (trimmed.startsWith('** This session may be vulnerable to "store now, decrypt later" attacks')) return false
+      if (trimmed.startsWith('** The server may need to be upgraded. See https://openssh.com/pq.html')) return false
+      return true
+    })
+    .join('\n')
+  return msg.trim()
 }
 
 function isRejectedError(e: unknown): boolean {
@@ -414,6 +429,7 @@ export const useApp = create<AppState>((set, get) => {
     conflictLoading: false,
     sync: null,
     error: null,
+    errorDetailOpen: false,
     confirm: null,
     pushConflict: false,
     opState: null,
@@ -822,7 +838,15 @@ export const useApp = create<AppState>((set, get) => {
 
     async pull(rebase = false): Promise<void> {
       const repoPath = get().repoPath
+      const status = get().status
       if (!repoPath) return
+      if (status && !status.upstream && !status.detached) {
+        set({
+          error: tf('toolbar.noUpstreamError', { branch: status.head ?? '' }),
+          errorDetailOpen: false
+        })
+        return
+      }
       const id = opId()
       const before = await captureUndo(true)
       set({ sync: { opId: id, kind: 'pull' }, error: null })
@@ -1431,7 +1455,15 @@ export const useApp = create<AppState>((set, get) => {
     },
 
     dismissError(): void {
-      set({ error: null })
+      set({ error: null, errorDetailOpen: false })
+    },
+
+    openErrorDetail(): void {
+      if (get().error) set({ errorDetailOpen: true })
+    },
+
+    closeErrorDetail(): void {
+      set({ errorDetailOpen: false })
     },
 
     setPushConflict(v): void {

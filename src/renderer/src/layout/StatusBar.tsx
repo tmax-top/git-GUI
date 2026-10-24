@@ -1,4 +1,6 @@
 import { memo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCircleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { useApp } from '../store'
 import { t, tf } from '../i18n'
 import { isStaged, isUntracked } from '@shared/status'
@@ -8,6 +10,7 @@ export const StatusBar = memo(function StatusBar(): React.JSX.Element {
   const status = useApp((s) => s.status)
   const error = useApp((s) => s.error)
   const dismissError = useApp((s) => s.dismissError)
+  const openErrorDetail = useApp((s) => s.openErrorDetail)
   const sync = useApp((s) => s.sync)
 
   const staged = status?.files.filter(isStaged).length ?? 0
@@ -21,9 +24,20 @@ export const StatusBar = memo(function StatusBar(): React.JSX.Element {
       </span>
 
       {error && (
-        <span className="flex min-w-0 max-w-[40%] items-center gap-1 truncate text-rose-400" title={error}>
-          <span className="truncate">{error}</span>
-          <button className="shrink-0 rounded px-1 hover:bg-zinc-800" onClick={dismissError}>
+        <span className="flex min-w-0 max-w-[55%] items-center gap-1.5 rounded bg-rose-950/40 border border-rose-900/60 px-2 py-0.5 text-rose-300">
+          <FontAwesomeIcon icon={faCircleExclamation} className="h-3 w-3 shrink-0 text-rose-400" />
+          <button
+            className="truncate text-left text-rose-300 hover:text-rose-100 hover:underline cursor-pointer"
+            onClick={openErrorDetail}
+            title={t('error.viewDetail')}
+          >
+            {error}
+          </button>
+          <button
+            className="shrink-0 rounded px-1 hover:bg-rose-900/50 hover:text-rose-100 text-rose-400"
+            onClick={dismissError}
+            title={t('common.close')}
+          >
             ✕
           </button>
         </span>

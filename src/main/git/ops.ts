@@ -1,4 +1,4 @@
-import { execGit, execGitOrThrow } from './exec'
+import { execGit, execGitOrThrow, cleanGitStderr } from './exec'
 import { parseProgressChunk, type ProgressEvent } from './progress'
 import { repoQueue } from './queue'
 
@@ -168,7 +168,8 @@ export async function fetch(repoPath: string, opts: SyncOptions = {}): Promise<v
       : undefined
   })
   if (result.code !== 0) {
-    throw new Error(`git fetch failed (${result.code}): ${result.stderr.trim()}`)
+    const cleaned = cleanGitStderr(result.stderr)
+    throw new Error(`git fetch failed (${result.code}): ${cleaned}`)
   }
 }
 
@@ -190,7 +191,13 @@ export async function pull(
       : undefined
   })
   if (result.code !== 0) {
-    throw new Error(`git pull failed (${result.code}): ${result.stderr.trim()}`)
+    const cleaned = cleanGitStderr(result.stderr)
+    if (cleaned.includes('There is no tracking information for the current branch')) {
+      throw new Error(
+        `git pull failed: There is no tracking information for the current branch. Please set an upstream branch or push first.`
+      )
+    }
+    throw new Error(`git pull failed (${result.code}): ${cleaned}`)
   }
 }
 
@@ -212,7 +219,8 @@ export async function push(
       : undefined
   })
   if (result.code !== 0) {
-    throw new Error(`git push failed (${result.code}): ${result.stderr.trim()}`)
+    const cleaned = cleanGitStderr(result.stderr)
+    throw new Error(`git push failed (${result.code}): ${cleaned}`)
   }
 }
 

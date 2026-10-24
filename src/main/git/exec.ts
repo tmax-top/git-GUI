@@ -20,12 +20,32 @@ export interface GitExecResult {
   code: number
 }
 
+/**
+ * Strips non-fatal informational warning banners emitted by OpenSSH / Git
+ * such as the OpenSSH 9.8+ post-quantum key exchange advisory banner.
+ */
+export function cleanGitStderr(stderr: string): string {
+  if (!stderr) return ''
+  return stderr
+    .split('\n')
+    .filter((line) => {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('** WARNING: connection is not using a post-quantum key exchange algorithm')) return false
+      if (trimmed.startsWith('** This session may be vulnerable to "store now, decrypt later" attacks')) return false
+      if (trimmed.startsWith('** The server may need to be upgraded. See https://openssh.com/pq.html')) return false
+      return true
+    })
+    .join('\n')
+    .trim()
+}
+
 export class GitExecError extends Error {
   constructor(
     public readonly result: GitExecResult,
     public readonly args: string[]
   ) {
-    super(`git ${args.join(' ')} exited with code ${result.code}: ${result.stderr.trim() || result.stdout.trim()}`)
+    const cleaned = cleanGitStderr(result.stderr)
+    super(`git ${args.join(' ')} exited with code ${result.code}: ${cleaned || result.stdout.trim()}`)
     this.name = 'GitExecError'
   }
 }

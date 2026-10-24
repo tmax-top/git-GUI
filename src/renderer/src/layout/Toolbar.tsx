@@ -129,6 +129,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
         className={`${btnGhost()} flex items-center gap-1.5 px-2.5 py-1 text-xs`}
         disabled={disabled}
         onClick={() => void pull()}
+        title={!status?.upstream && !status?.detached ? t('toolbar.noUpstream') : t('toolbar.pull')}
       >
         <FontAwesomeIcon icon={faArrowDown} className="h-3.5 w-3.5 text-zinc-400" />
         <span>{t('toolbar.pull')}</span>

@@ -21,6 +21,8 @@ export const zh = {
   'common.remove': '移除',
   'common.retry': '重试',
   'common.search': '搜索',
+  'common.copy': '复制',
+  'common.copied': '已复制',
 
   'start.open': '打开仓库',
   'start.clone': '克隆仓库',
@@ -64,6 +66,8 @@ export const zh = {
   'toolbar.close': '关闭仓库',
   'toolbar.cancelOp': '取消操作',
   'toolbar.syncing': '同步中…',
+  'toolbar.noUpstream': '当前分支未设置上游分支',
+  'toolbar.noUpstreamError': '分支 "{branch}" 没有配置上游跟踪分支，无法拉取。请先推送到远程分支或配置关联。',
 
   'left.branchesLocal': '本地分支',
   'left.branchesRemote': '远程分支',
@@ -498,7 +502,10 @@ export const zh = {
   'patch.exportSuccess': '已导出 Patch 到: {path}',
 
   'error.notRepo': '不是 git 仓库',
-  'error.generic': '操作失败'
+  'error.generic': '操作失败',
+  'error.modalTitle': '错误详情',
+  'error.modalDesc': '操作执行失败，完整错误信息如下：',
+  'error.viewDetail': '点击查看完整错误详情'
 }
 
 export const en = {
@@ -524,6 +531,8 @@ export const en = {
   'common.remove': 'Remove',
   'common.retry': 'Retry',
   'common.search': 'Search',
+  'common.copy': 'Copy',
+  'common.copied': 'Copied',
 
   'start.open': 'Open Repository',
   'start.clone': 'Clone Repository',
@@ -567,6 +576,8 @@ export const en = {
   'toolbar.close': 'Close repository',
   'toolbar.cancelOp': 'Cancel',
   'toolbar.syncing': 'Syncing…',
+  'toolbar.noUpstream': 'Current branch has no upstream branch',
+  'toolbar.noUpstreamError': 'Branch "{branch}" has no upstream tracking branch to pull from. Please push or configure tracking first.',
 
   'left.branchesLocal': 'Local branches',
   'left.branchesRemote': 'Remote branches',
@@ -1001,7 +1012,10 @@ export const en = {
   'patch.exportSuccess': 'Patch exported to: {path}',
 
   'error.notRepo': 'Not a git repository',
-  'error.generic': 'Operation failed'
+  'error.generic': 'Operation failed',
+  'error.modalTitle': 'Error Details',
+  'error.modalDesc': 'The operation failed. Full error output below:',
+  'error.viewDetail': 'Click to view full error details'
 }
 
 export type Locale = 'zh' | 'en'
