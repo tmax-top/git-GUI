@@ -1,4 +1,25 @@
 import { memo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faRotateLeft,
+  faRotateRight,
+  faCloudArrowDown,
+  faArrowDown,
+  faArrowUp,
+  faMagnifyingGlass,
+  faTerminal,
+  faCodePullRequest,
+  faFolder,
+  faUser,
+  faRotate,
+  faMoon,
+  faSun,
+  faKeyboard,
+  faCircleQuestion,
+  faGear,
+  faBoxArchive,
+  faXmark
+} from '@fortawesome/free-solid-svg-icons'
 import { useApp } from '../store'
 import { t, tf, type MessageKey } from '../i18n'
 import { btnGhost } from '../components/Modal'
@@ -70,7 +91,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
       <span className="flex-1" />
 
       <button
-        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 disabled:opacity-40"
+        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-40"
         disabled={disabled || !undoInfo.canUndo}
         onClick={() => void undo()}
         title={
@@ -79,10 +100,10 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
             : t('undo.undo')
         }
       >
-        ↩
+        <FontAwesomeIcon icon={faRotateLeft} className="h-3.5 w-3.5" />
       </button>
       <button
-        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 disabled:opacity-40"
+        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-40"
         disabled={disabled || !undoInfo.canRedo}
         onClick={() => void redo()}
         title={
@@ -91,127 +112,145 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
             : t('undo.redo')
         }
       >
-        ↪
+        <FontAwesomeIcon icon={faRotateRight} className="h-3.5 w-3.5" />
       </button>
 
       <span className="mx-1 h-4 w-px bg-zinc-700" />
 
-      <button className={btnGhost()} disabled={disabled} onClick={() => void fetchNow()}>
-        {t('toolbar.fetch')}
-      </button>
-      <button className={btnGhost()} disabled={disabled} onClick={() => void pull()}>
-        {t('toolbar.pull')}
+      <button
+        className={`${btnGhost()} flex items-center gap-1.5 px-2.5 py-1 text-xs`}
+        disabled={disabled}
+        onClick={() => void fetchNow()}
+      >
+        <FontAwesomeIcon icon={faCloudArrowDown} className="h-3.5 w-3.5 text-zinc-400" />
+        <span>{t('toolbar.fetch')}</span>
       </button>
       <button
-        className="rounded border border-emerald-700 px-3 py-1.5 text-sm text-emerald-400 hover:bg-emerald-900/40 disabled:opacity-50"
+        className={`${btnGhost()} flex items-center gap-1.5 px-2.5 py-1 text-xs`}
+        disabled={disabled}
+        onClick={() => void pull()}
+      >
+        <FontAwesomeIcon icon={faArrowDown} className="h-3.5 w-3.5 text-zinc-400" />
+        <span>{t('toolbar.pull')}</span>
+      </button>
+      <button
+        className="flex items-center gap-1.5 rounded border border-emerald-700 bg-emerald-950/30 px-3 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-900/40 disabled:opacity-50"
         disabled={disabled}
         onClick={() => void push()}
       >
-        {t('toolbar.push')}
+        <FontAwesomeIcon icon={faArrowUp} className="h-3.5 w-3.5 text-emerald-400" />
+        <span>{t('toolbar.push')}</span>
       </button>
 
       <button
-        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800"
+        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
         onClick={openSearch}
         title={`${t('search.title')} (⌘F)`}
       >
-        ⌕
+        <FontAwesomeIcon icon={faMagnifyingGlass} className="h-3.5 w-3.5" />
       </button>
 
       <button
-        className={`rounded px-2 py-1 ${terminalOpen ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800'}`}
+        className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition ${terminalOpen ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
         onClick={toggleTerminal}
         title={t('terminal.toggle')}
         data-testid="toolbar-terminal"
       >
-        ❯_
+        <FontAwesomeIcon icon={faTerminal} className="h-3.5 w-3.5" />
       </button>
 
       <button
-        className={`rounded px-2 py-1 text-xs font-semibold ${prPanelOpen ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800'}`}
+        className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-semibold transition ${prPanelOpen ? 'bg-zinc-700 text-zinc-100 shadow' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
         onClick={togglePrPanel}
         title={t('pr.toggle')}
         data-testid="toolbar-pr"
       >
-        PR
+        <FontAwesomeIcon icon={faCodePullRequest} className="h-3.5 w-3.5 text-sky-400" />
+        <span>PR</span>
       </button>
 
       <button
-        className={`rounded px-2 py-1 text-xs ${activeWorkspace ? 'bg-zinc-800 text-sky-400 font-medium' : 'text-zinc-400 hover:bg-zinc-800'}`}
+        className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs transition ${activeWorkspace ? 'bg-zinc-800 text-sky-400 font-medium' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
         onClick={openWorkspaceModal}
         title={activeWorkspace ? `${t('workspace.active')}: ${activeWorkspace.name}` : t('workspace.manage')}
         data-testid="toolbar-workspace-btn"
       >
-        {activeWorkspace ? `📁 ${activeWorkspace.name}` : '📁'}
+        <FontAwesomeIcon icon={faFolder} className="h-3.5 w-3.5" />
+        {activeWorkspace && <span className="max-w-[100px] truncate">{activeWorkspace.name}</span>}
       </button>
 
       {activeProfile && (
         <span
-          className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-emerald-400 font-mono"
+          className="flex items-center gap-1.5 rounded bg-zinc-800 px-2 py-0.5 text-xs text-emerald-400 font-mono"
           title={`${t('profile.active')}: ${activeProfile.name} (${activeProfile.authorName} <${activeProfile.authorEmail}>)`}
           data-testid="toolbar-profile"
         >
-          👤 {activeProfile.name}
+          <FontAwesomeIcon icon={faUser} className="h-3 w-3" />
+          <span className="max-w-[100px] truncate">{activeProfile.name}</span>
         </span>
       )}
 
       <button
-        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800"
+        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
         onClick={() => {
           void refreshStatus()
           void loadGraph(true)
         }}
         title={t('toolbar.refresh')}
       >
-        ⟳
+        <FontAwesomeIcon icon={faRotate} className="h-3.5 w-3.5" />
       </button>
 
       <span className="mx-1 h-4 w-px bg-zinc-700" />
 
       <button
-        className={`rounded px-2 py-1 ${settings.language === 'zh' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:bg-zinc-800'}`}
+        className={`rounded px-2 py-1 text-xs font-medium transition ${settings.language === 'zh' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'}`}
         onClick={() => void updateSettings({ language: 'zh' })}
       >
         中
       </button>
       <button
-        className={`rounded px-2 py-1 ${settings.language === 'en' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:bg-zinc-800'}`}
+        className={`rounded px-2 py-1 text-xs font-medium transition ${settings.language === 'en' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'}`}
         onClick={() => void updateSettings({ language: 'en' })}
       >
         EN
       </button>
       <button
-        className={`rounded px-2 py-1 ${settings.theme === 'dark' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:bg-zinc-800'}`}
+        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition"
         onClick={() => void updateSettings({ theme: settings.theme === 'dark' ? 'light' : 'dark' })}
         title={t('settings.theme')}
         data-testid="toolbar-theme-toggle"
       >
-        {settings.theme === 'dark' ? '🌙' : '☀️'}
+        <FontAwesomeIcon
+          icon={settings.theme === 'dark' ? faMoon : faSun}
+          className={`h-3.5 w-3.5 ${settings.theme === 'dark' ? 'text-amber-300' : 'text-amber-500'}`}
+        />
       </button>
       <button
-        className="rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800 font-mono"
+        className="flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 font-mono transition"
         onClick={openCommandPalette}
         title={`${t('palette.title')} (⌘K)`}
         data-testid="toolbar-palette"
       >
-        ⌘K
+        <FontAwesomeIcon icon={faKeyboard} className="h-3.5 w-3.5 text-zinc-400" />
+        <span>⌘K</span>
       </button>
 
       <button
-        className="rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800"
+        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition"
         onClick={openShortcutsModal}
         title={`${t('shortcuts.title')} (⌘/)`}
         data-testid="toolbar-shortcuts"
       >
-        ?
+        <FontAwesomeIcon icon={faCircleQuestion} className="h-3.5 w-3.5" />
       </button>
 
       <button
-        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+        className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition"
         onClick={() => openSettings()}
         title={t('toolbar.settings')}
       >
-        ⚙
+        <FontAwesomeIcon icon={faGear} className="h-3.5 w-3.5" />
       </button>
 
       {sync && (
@@ -225,18 +264,23 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
             </span>
           )}
           <button
-            className="rounded px-1 text-rose-400 hover:bg-zinc-700"
+            className="rounded p-0.5 text-rose-400 hover:bg-zinc-700"
             onClick={() => void cancelSync()}
             title={t('toolbar.cancelOp')}
           >
-            ✕
+            <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
           </button>
         </span>
       )}
 
       {!sync && status && (
-        <span className="text-zinc-600">
-          {tf('status.staged', { n: status.files.filter((f) => f.indexStatus !== ' ' && f.indexStatus !== '?').length })}
+        <span className="flex items-center gap-1.5 text-zinc-500 text-xs">
+          <FontAwesomeIcon icon={faBoxArchive} className="h-3 w-3 text-zinc-500" />
+          <span>
+            {tf('status.staged', {
+              n: status.files.filter((f) => f.indexStatus !== ' ' && f.indexStatus !== '?').length
+            })}
+          </span>
         </span>
       )}
     </header>
