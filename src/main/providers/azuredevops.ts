@@ -48,6 +48,8 @@ interface AdoChangeItem {
   item?: { path?: string }
 }
 
+const ADO_API_VERSION = '7.1-preview'
+
 async function adoFetch(url: string, token: string, init?: RequestInit): Promise<Response> {
   const headers = new Headers(init?.headers)
   headers.set('Authorization', `Basic ${Buffer.from(':' + token).toString('base64')}`)
@@ -106,7 +108,7 @@ export class AzureDevOpsProvider implements GitProvider {
     const org = options?.org
     if (org) {
       const res = await adoFetch(
-        `https://dev.azure.com/${org}/_apis/connectionData?api-version=7.1`,
+        `https://dev.azure.com/${org}/_apis/connectionData?api-version=${ADO_API_VERSION}`,
         token
       )
       const data = (await res.json()) as {
@@ -126,7 +128,7 @@ export class AzureDevOpsProvider implements GitProvider {
     // Default VSSPS profile endpoint
     try {
       const res = await adoFetch(
-        'https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1',
+        'https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=${ADO_API_VERSION}',
         token
       )
       const data = (await res.json()) as { displayName?: string; publicAlias?: string; emailAddress?: string }
@@ -163,7 +165,7 @@ export class AzureDevOpsProvider implements GitProvider {
             ? 'abandoned'
             : 'all'
 
-    const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${repo}/pullrequests?searchCriteria.status=${adoStatus}&api-version=7.1`
+    const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${repo}/pullrequests?searchCriteria.status=${adoStatus}&api-version=${ADO_API_VERSION}`
     const res = await adoFetch(url, token)
     const json = (await res.json()) as { value?: AdoPr[] }
     const list = json.value ?? []
@@ -178,9 +180,9 @@ export class AzureDevOpsProvider implements GitProvider {
     const base = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${repo}/pullrequests/${prId}`
 
     const [prRes, threadsRes, iterationsRes] = await Promise.all([
-      adoFetch(`${base}?api-version=7.1`, token),
-      adoFetch(`${base}/threads?api-version=7.1`, token).catch(() => null),
-      adoFetch(`${base}/iterations?api-version=7.1`, token).catch(() => null)
+      adoFetch(`${base}?api-version=${ADO_API_VERSION}`, token),
+      adoFetch(`${base}/threads?api-version=${ADO_API_VERSION}`, token).catch(() => null),
+      adoFetch(`${base}/iterations?api-version=${ADO_API_VERSION}`, token).catch(() => null)
     ])
 
     const pr = (await prRes.json()) as AdoPr
@@ -212,7 +214,7 @@ export class AzureDevOpsProvider implements GitProvider {
       const iters = iterJson?.value ?? []
       if (iters.length > 0) {
         const lastId = iters[iters.length - 1].id
-        const changesRes = await adoFetch(`${base}/iterations/${lastId}/changes?api-version=7.1`, token)
+        const changesRes = await adoFetch(`${base}/iterations/${lastId}/changes?api-version=${ADO_API_VERSION}`, token)
         const changesJson = (await changesRes.json()) as { changeEntries?: AdoChangeItem[] }
         const changes = changesJson.changeEntries ?? []
         diff = changes
@@ -236,7 +238,7 @@ export class AzureDevOpsProvider implements GitProvider {
     const { org, project, repo } = ref
     if (!org || !project) throw new Error('Azure DevOps 仓库缺少 org 或 project')
 
-    const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${repo}/pullrequests?api-version=7.1`
+    const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${repo}/pullrequests?api-version=${ADO_API_VERSION}`
     const res = await adoFetch(url, token, {
       method: 'POST',
       body: JSON.stringify({
@@ -257,7 +259,7 @@ export class AzureDevOpsProvider implements GitProvider {
     if (!org || !project) throw new Error('Azure DevOps 仓库缺少 org 或 project')
 
     const prId = Number(id)
-    const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${repo}/pullrequests/${prId}/threads?api-version=7.1`
+    const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${repo}/pullrequests/${prId}/threads?api-version=${ADO_API_VERSION}`
     await adoFetch(url, token, {
       method: 'POST',
       body: JSON.stringify({
@@ -278,7 +280,7 @@ export class AzureDevOpsProvider implements GitProvider {
     if (!org || !project) throw new Error('Azure DevOps 仓库缺少 org 或 project')
 
     const prId = Number(id)
-    const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${repo}/pullrequests/${prId}?api-version=7.1`
+    const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${repo}/pullrequests/${prId}?api-version=${ADO_API_VERSION}`
     // strategy: noFastForward, squash, rebase
     const mergeStrategy = method === 'squash' ? 'squash' : method === 'rebase' ? 'rebase' : 'noFastForward'
     await adoFetch(url, token, {

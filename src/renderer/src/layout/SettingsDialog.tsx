@@ -761,23 +761,28 @@ function IntegrationsSection(): React.JSX.Element {
 
         {!ghAccount && (
           <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <input
-                type="password"
-                className={`${inputClass()} flex-1`}
-                value={ghToken}
-                onChange={(e) => setGhToken(e.target.value)}
-                placeholder={t('provider.patPlaceholder')}
-                data-testid="gh-pat-input"
-              />
-              <button
-                className={btnPrimary()}
-                disabled={!ghToken.trim() || ghBusy}
-                onClick={() => void handleConnectGh()}
-                data-testid="gh-connect-btn"
-              >
-                {ghBusy ? '…' : t('provider.connect')}
-              </button>
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] text-zinc-400 font-medium">
+                {t('provider.pat')}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  className={`${inputClass()} flex-1`}
+                  value={ghToken}
+                  onChange={(e) => setGhToken(e.target.value)}
+                  placeholder={t('provider.patPlaceholder')}
+                  data-testid="gh-pat-input"
+                />
+                <button
+                  className={btnPrimary()}
+                  disabled={!ghToken.trim() || ghBusy}
+                  onClick={() => void handleConnectGh()}
+                  data-testid="gh-connect-btn"
+                >
+                  {ghBusy ? '…' : t('provider.connect')}
+                </button>
+              </div>
             </div>
             {ghErr && <div className="text-rose-400 text-[11px]">{ghErr}</div>}
           </div>
@@ -809,32 +814,42 @@ function IntegrationsSection(): React.JSX.Element {
         </div>
 
         {!adoAccount && (
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] text-zinc-400 font-medium">
+                {t('provider.org')}
+              </label>
               <input
                 type="text"
-                className={`${inputClass()} w-32`}
+                className={inputClass()}
                 value={adoOrg}
                 onChange={(e) => setAdoOrg(e.target.value)}
                 placeholder={t('provider.orgPlaceholder')}
                 data-testid="ado-org-input"
               />
-              <input
-                type="password"
-                className={`${inputClass()} flex-1`}
-                value={adoToken}
-                onChange={(e) => setAdoToken(e.target.value)}
-                placeholder={t('provider.patPlaceholder')}
-                data-testid="ado-pat-input"
-              />
-              <button
-                className={btnPrimary()}
-                disabled={!adoToken.trim() || adoBusy}
-                onClick={() => void handleConnectAdo()}
-                data-testid="ado-connect-btn"
-              >
-                {adoBusy ? '…' : t('provider.connect')}
-              </button>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] text-zinc-400 font-medium">
+                {t('provider.pat')}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  className={`${inputClass()} flex-1`}
+                  value={adoToken}
+                  onChange={(e) => setAdoToken(e.target.value)}
+                  placeholder={t('provider.patPlaceholder')}
+                  data-testid="ado-pat-input"
+                />
+                <button
+                  className={btnPrimary()}
+                  disabled={!adoToken.trim() || adoBusy}
+                  onClick={() => void handleConnectAdo()}
+                  data-testid="ado-connect-btn"
+                >
+                  {adoBusy ? '…' : t('provider.connect')}
+                </button>
+              </div>
             </div>
             {adoErr && <div className="text-rose-400 text-[11px]">{adoErr}</div>}
           </div>
