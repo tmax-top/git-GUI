@@ -6,11 +6,12 @@ export function Modal(props: {
   onClose: () => void
   children: ReactNode
   footer?: ReactNode
+  closeOnBackdropClick?: boolean
 }): React.JSX.Element {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      onClick={props.onClose}
+      onClick={props.closeOnBackdropClick ? props.onClose : undefined}
       onKeyDown={(e) => {
         if (e.key === 'Escape') props.onClose()
       }}
