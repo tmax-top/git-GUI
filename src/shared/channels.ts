@@ -101,7 +101,9 @@ export const IPC = {
   pickFile: 'dialog:pickFile',
   pickSavePath: 'dialog:pickSavePath',
   patchExport: 'patch:export',
-  patchApply: 'patch:apply'
+  patchApply: 'patch:apply',
+  aiGenerateCommitMsg: 'ai:generateCommitMsg',
+  aiTestConnection: 'ai:testConnection'
 } as const
 
 export const IPC_EVENTS = {

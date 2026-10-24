@@ -7,6 +7,8 @@ export function Modal(props: {
   children: ReactNode
   footer?: ReactNode
   closeOnBackdropClick?: boolean
+  maxWidth?: string
+  bodyClassName?: string
 }): React.JSX.Element {
   return (
     <div
@@ -18,13 +20,13 @@ export function Modal(props: {
       role="presentation"
     >
       <div
-        className="w-full max-w-lg rounded-lg border border-zinc-700 bg-zinc-900 shadow-2xl"
+        className={`w-full ${props.maxWidth ?? 'max-w-lg'} rounded-lg border border-zinc-700 bg-zinc-900 shadow-2xl flex flex-col`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={props.title}
       >
-        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3 shrink-0">
           <h2 className="text-sm font-semibold text-zinc-100">{props.title}</h2>
           <button
             className="rounded px-2 py-0.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
@@ -34,9 +36,9 @@ export function Modal(props: {
             ✕
           </button>
         </div>
-        <div className="max-h-[70vh] overflow-auto p-4">{props.children}</div>
+        <div className={props.bodyClassName ?? 'max-h-[70vh] overflow-auto p-4'}>{props.children}</div>
         {props.footer && (
-          <div className="flex justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+          <div className="flex justify-end gap-2 border-t border-zinc-800 px-4 py-3 shrink-0">
             {props.footer}
           </div>
         )}

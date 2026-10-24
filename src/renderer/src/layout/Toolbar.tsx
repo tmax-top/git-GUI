@@ -250,6 +250,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
         className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition"
         onClick={() => openSettings()}
         title={t('toolbar.settings')}
+        data-testid="toolbar-settings"
       >
         <FontAwesomeIcon icon={faGear} className="h-3.5 w-3.5" />
       </button>

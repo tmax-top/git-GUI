@@ -132,6 +132,11 @@ export interface AppSettingsDto {
   profiles: ProfileDto[]
   /** Active profile ID, or null to use git defaults. */
   activeProfileId: string | null
+  /** AI Commit message settings. */
+  aiApiUrl?: string
+  aiApiKey?: string
+  aiModel?: string
+  aiPrompt?: string
 }
 
 export interface ProfileDto {
@@ -771,7 +776,11 @@ export const settingsPatchSchema = z.object({
   workspaces: z.array(workspaceDtoSchema).optional(),
   activeWorkspaceId: z.string().max(64).nullable().optional(),
   profiles: z.array(profileDtoSchema).optional(),
-  activeProfileId: z.string().max(64).nullable().optional()
+  activeProfileId: z.string().max(64).nullable().optional(),
+  aiApiUrl: z.string().max(1024).optional(),
+  aiApiKey: z.string().max(1024).optional(),
+  aiModel: z.string().max(255).optional(),
+  aiPrompt: z.string().max(4096).optional()
 })
 
 /** Read back recent activity-log entries (newest first). */
@@ -909,6 +918,19 @@ export interface PatchApplyResultDto {
   mode: 'am' | 'apply'
   message: string
 }
+
+export const aiGenerateCommitMsgSchema = z.object({
+  repoPath: repoPathSchema,
+  draft: z.string().max(4096).optional()
+})
+export type AiGenerateCommitMsgInputDto = z.infer<typeof aiGenerateCommitMsgSchema>
+
+export const aiTestConnectionSchema = z.object({
+  apiUrl: z.string().max(1024).optional(),
+  apiKey: z.string().max(1024).optional(),
+  model: z.string().max(255).optional()
+})
+export type AiTestConnectionInputDto = z.infer<typeof aiTestConnectionSchema>
 
 // IPC channel names live in ./channels (sandboxed-preload safe) and are
 // re-exported here for convenience.

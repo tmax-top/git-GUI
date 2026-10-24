@@ -1,0 +1,157 @@
+import { execGit } from './git/exec'
+import { loadSettings } from './settings'
+import type { AiGenerateCommitMsgInputDto, AiTestConnectionInputDto } from '../shared/ipc'
+
+export async function generateAiCommitMessage(input: AiGenerateCommitMsgInputDto): Promise<string> {
+  const settings = await loadSettings()
+  const apiUrl = (settings.aiApiUrl?.trim() || 'https://api.openai.com/v1').replace(/\/+$/, '')
+  const apiKey = settings.aiApiKey?.trim() || ''
+  const model = settings.aiModel?.trim() || 'gpt-4o-mini'
+
+  const isLocal = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1')
+  if (!apiKey && !isLocal) {
+    throw new Error('未配置 AI API Key，请在「设置 -> AI 助手」中配置 API 密钥或本地大模型服务')
+  }
+
+  // 1. Get git diff: staged first, then unstaged if staged is empty
+  let diffRes = await execGit({ cwd: input.repoPath, args: ['diff', '--cached'] })
+  let diff = diffRes.stdout.trim()
+  let isStaged = true
+  if (!diff) {
+    diffRes = await execGit({ cwd: input.repoPath, args: ['diff'] })
+    diff = diffRes.stdout.trim()
+    isStaged = false
+  }
+
+  if (!diff && !input.draft?.trim()) {
+    throw new Error('没有检测到暂存区或工作区的代码变更，无法生成 commit 消息')
+  }
+
+  // Cap diff to ~12000 characters to stay within token & speed limits
+  const maxChars = 12000
+  let truncatedDiff = diff
+  if (diff.length > maxChars) {
+    truncatedDiff = diff.slice(0, maxChars) + '\n\n... (diff truncated for length)'
+  }
+
+  const defaultSystemPrompt = `You are an expert Git commit assistant.
+Your task is to generate a concise, meaningful, and professional Git commit message based on the provided diff.
+Follow the Conventional Commits specification:
+- Format: <type>(<optional scope>): <subject>
+- Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.
+- The summary line should be under 72 characters, lowercase imperative mood without trailing period.
+- If there are multiple noteworthy changes, provide a concise bulleted description in the message body.
+- If the user provides draft notes, incorporate and polish them.
+- Output ONLY the plain text commit message with NO markdown code blocks (do NOT use \`\`\` or quotes).`
+
+  const systemPrompt = settings.aiPrompt?.trim() || defaultSystemPrompt
+
+  const userContent = [
+    input.draft?.trim() ? `User draft notes:\n${input.draft.trim()}\n` : '',
+    diff
+      ? `Git diff (${isStaged ? 'staged changes' : 'unstaged working tree'}):\n${truncatedDiff}`
+      : 'No diff available, please format and refine the user draft notes.'
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+
+  const endpoint = `${apiUrl}/chat/completions`
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  }
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 45000)
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent }
+        ],
+        temperature: 0.3,
+        max_tokens: 500
+      })
+    })
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '')
+      throw new Error(`AI 服务请求失败 (${res.status}): ${errBody || res.statusText}`)
+    }
+
+    const json = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>
+    }
+    const message = json.choices?.[0]?.message?.content?.trim()
+    if (!message) {
+      throw new Error('AI 服务未返回有效的 commit 消息内容')
+    }
+
+    // Strip any markdown code fence wrapping if model added it
+    return message
+      .replace(/^```[a-zA-Z]*\n?/, '')
+      .replace(/\n?```$/, '')
+      .trim()
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('AI 服务请求超时 (45s)', { cause: err })
+    }
+    throw err
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+export async function testAiConnection(
+  input: AiTestConnectionInputDto
+): Promise<{ success: boolean; message: string }> {
+  const apiUrl = (input.apiUrl?.trim() || 'https://api.openai.com/v1').replace(/\/+$/, '')
+  const apiKey = input.apiKey?.trim() || ''
+  const model = input.model?.trim() || 'gpt-4o-mini'
+
+  const endpoint = `${apiUrl}/chat/completions`
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  }
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 15000)
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: 'Ping. Reply with "pong".' }],
+        max_tokens: 10
+      })
+    })
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '')
+      throw new Error(`HTTP ${res.status}: ${errBody || res.statusText}`)
+    }
+
+    return { success: true, message: '连接成功，服务正常响应！' }
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('请求超时 (15s)', { cause: err })
+    }
+    throw err
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}

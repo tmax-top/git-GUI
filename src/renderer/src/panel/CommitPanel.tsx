@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { useApp, fileGroups, currentCommit } from '../store'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faWandMagicSparkles, faSpinner } from '@fortawesome/free-solid-svg-icons'
+import { useApp, fileGroups, currentCommit, errText } from '../store'
 import { t, tf } from '../i18n'
 import { fullDate, statusLetter } from '../utils/format'
 import { btnPrimary } from '../components/Modal'
@@ -153,12 +155,44 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
   const doCommit = useApp((s) => s.doCommit)
   const exportPatch = useApp((s) => s.exportPatch)
   const openPatchModal = useApp((s) => s.openPatchModal)
+  const repoPath = useApp((s) => s.repoPath)
+  const openSettings = useApp((s) => s.openSettings)
 
   const [message, setMessage] = useState('')
   const [amend, setAmend] = useState(false)
   const [coName, setCoName] = useState('')
   const [coEmail, setCoEmail] = useState('')
   const [committing, setCommitting] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+
+  const handleAiGenerate = async (): Promise<void> => {
+    if (!repoPath || aiLoading) return
+    const settings = useApp.getState().settings
+    const hasKey = Boolean(settings.aiApiKey?.trim())
+    const isLocal = Boolean(settings.aiApiUrl?.includes('localhost') || settings.aiApiUrl?.includes('127.0.0.1'))
+    if (!hasKey && !isLocal) {
+      useApp.setState({
+        error: t('panel.aiNoConfig')
+      })
+      openSettings('ai')
+      return
+    }
+
+    setAiLoading(true)
+    try {
+      const generated = await window.api.aiGenerateCommitMsg({
+        repoPath,
+        draft: message.trim() || undefined
+      })
+      if (generated) {
+        setMessage(generated)
+      }
+    } catch (err) {
+      useApp.setState({ error: errText(err) })
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   const groups = fileGroups(status)
   const stagedCount = groups.staged.length
@@ -282,6 +316,23 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
       </div>
 
       <div className="border-t border-zinc-800 p-2">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[11px] font-medium text-zinc-400">{t('panel.message')}</span>
+          <button
+            type="button"
+            className="flex items-center gap-1 rounded bg-gradient-to-r from-emerald-600/20 to-sky-600/20 border border-emerald-500/30 px-2 py-0.5 text-[11px] text-emerald-300 transition hover:from-emerald-600/30 hover:to-sky-600/30 hover:border-emerald-400 hover:text-emerald-200 disabled:opacity-50 cursor-pointer"
+            disabled={aiLoading || !repoPath}
+            onClick={() => void handleAiGenerate()}
+            title={t('panel.aiHint')}
+            data-testid="ai-generate-commit-btn"
+          >
+            <FontAwesomeIcon
+              icon={aiLoading ? faSpinner : faWandMagicSparkles}
+              className={`h-3 w-3 ${aiLoading ? 'animate-spin text-emerald-400' : 'text-emerald-400'}`}
+            />
+            <span>{aiLoading ? t('panel.aiGenerating') : t('panel.aiGenerate')}</span>
+          </button>
+        </div>
         <textarea
           className="h-20 w-full resize-none rounded border border-zinc-800 bg-zinc-900 p-2 text-xs text-zinc-100 outline-none focus:border-emerald-600"
           placeholder={t('panel.message')}

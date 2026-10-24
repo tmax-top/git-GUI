@@ -264,6 +264,8 @@ export interface GitGuiApi {
 
   patchExport(args: { repoPath: string; oid?: string; targetPath?: string }): Promise<PatchExportResultDto>
   patchApply(args: { repoPath: string; patchPath?: string; patchContent?: string }): Promise<PatchApplyResultDto>
+  aiGenerateCommitMsg(args: { repoPath: string; draft?: string }): Promise<string>
+  aiTestConnection(args: { apiUrl?: string; apiKey?: string; model?: string }): Promise<{ success: boolean; message: string }>
 
   watchStart(repoPath: string): Promise<void>
   watchStop(repoPath: string): Promise<void>
@@ -384,6 +386,8 @@ const api: GitGuiApi = {
 
   patchExport: (args) => ipcRenderer.invoke(IPC.patchExport, args),
   patchApply: (args) => ipcRenderer.invoke(IPC.patchApply, args),
+  aiGenerateCommitMsg: (args) => ipcRenderer.invoke(IPC.aiGenerateCommitMsg, args),
+  aiTestConnection: (args) => ipcRenderer.invoke(IPC.aiTestConnection, args),
 
   watchStart: (repoPath) => ipcRenderer.invoke(IPC.watchStart, { repoPath }),
   watchStop: (repoPath) => ipcRenderer.invoke(IPC.watchStop, { repoPath }),

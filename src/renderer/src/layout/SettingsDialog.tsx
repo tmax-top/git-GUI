@@ -1,4 +1,16 @@
 import { useEffect, useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faGear,
+  faWandMagicSparkles,
+  faCloud,
+  faUser,
+  faTerminal,
+  faCodeBranch,
+  faWrench,
+  faEye,
+  faEyeSlash
+} from '@fortawesome/free-solid-svg-icons'
 import type {
   ActivityEntryDto,
   GitflowStatusDto,
@@ -76,10 +88,180 @@ function ActivityLog(): React.JSX.Element {
   )
 }
 
+type SettingsTab = 'general' | 'ai' | 'integrations' | 'profiles' | 'terminal' | 'advanced' | 'tools'
+
+const TAB_IDS: SettingsTab[] = ['general', 'ai', 'integrations', 'profiles', 'terminal', 'advanced', 'tools']
+
+function AiSection(): React.JSX.Element {
+  const settings = useApp((s) => s.settings)
+  const updateSettings = useApp((s) => s.updateSettings)
+
+  const [apiUrl, setApiUrl] = useState(settings.aiApiUrl ?? '')
+  const [apiKey, setApiKey] = useState(settings.aiApiKey ?? '')
+  const [model, setModel] = useState(settings.aiModel ?? 'gpt-4o-mini')
+  const [prompt, setPrompt] = useState(settings.aiPrompt ?? '')
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [showKey, setShowKey] = useState(false)
+
+  const save = async (): Promise<void> => {
+    setSaving(true)
+    try {
+      await updateSettings({
+        aiApiUrl: apiUrl.trim(),
+        aiApiKey: apiKey.trim(),
+        aiModel: model.trim(),
+        aiPrompt: prompt.trim()
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const runTest = async (): Promise<void> => {
+    setTesting(true)
+    setTestResult(null)
+    try {
+      await window.api.aiTestConnection({
+        apiUrl: apiUrl.trim(),
+        apiKey: apiKey.trim(),
+        model: model.trim()
+      })
+      setTestResult({ ok: true, msg: t('ai.testSuccess') })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setTestResult({ ok: false, msg: tf('ai.testFail', { msg }) })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const applyPreset = (preset: { url: string; model: string }): void => {
+    setApiUrl(preset.url)
+    setModel(preset.model)
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <div className="text-sm font-semibold text-zinc-100">{t('ai.title')}</div>
+        <div className="text-xs text-zinc-500 mt-0.5">{t('ai.apiUrlHint')}</div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-zinc-400">{t('ai.presets')}:</span>
+        <button
+          type="button"
+          className="rounded bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition cursor-pointer"
+          onClick={() => applyPreset({ url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' })}
+        >
+          OpenAI (gpt-4o-mini)
+        </button>
+        <button
+          type="button"
+          className="rounded bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition cursor-pointer"
+          onClick={() => applyPreset({ url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' })}
+        >
+          DeepSeek (deepseek-chat)
+        </button>
+        <button
+          type="button"
+          className="rounded bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition cursor-pointer"
+          onClick={() => applyPreset({ url: 'http://localhost:11434/v1', model: 'qwen2.5-coder' })}
+        >
+          Ollama (qwen2.5-coder)
+        </button>
+      </div>
+
+      <label className="flex flex-col gap-1 text-xs text-zinc-300">
+        <span className="font-medium text-zinc-300">{t('ai.apiUrl')}</span>
+        <input
+          className={inputClass()}
+          value={apiUrl}
+          placeholder="https://api.openai.com/v1"
+          onChange={(e) => setApiUrl(e.target.value)}
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-xs text-zinc-300">
+        <span className="font-medium text-zinc-300">{t('ai.apiKey')}</span>
+        <div className="flex gap-2">
+          <input
+            type={showKey ? 'text' : 'password'}
+            className={inputClass()}
+            value={apiKey}
+            placeholder={t('ai.apiKeyPlaceholder')}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+          <button
+            type="button"
+            className={`${btnGhost()} px-3 shrink-0 flex items-center justify-center`}
+            onClick={() => setShowKey((v) => !v)}
+            title={showKey ? 'Hide' : 'Show'}
+          >
+            <FontAwesomeIcon icon={showKey ? faEyeSlash : faEye} className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </label>
+
+      <label className="flex flex-col gap-1 text-xs text-zinc-300">
+        <span className="font-medium text-zinc-300">{t('ai.model')}</span>
+        <input
+          className={inputClass()}
+          value={model}
+          placeholder="gpt-4o-mini"
+          onChange={(e) => setModel(e.target.value)}
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-xs text-zinc-300">
+        <span className="font-medium text-zinc-300">{t('ai.prompt')}</span>
+        <textarea
+          className={`${inputClass()} h-24 resize-none`}
+          value={prompt}
+          placeholder={t('ai.promptPlaceholder')}
+          onChange={(e) => setPrompt(e.target.value)}
+        />
+      </label>
+
+      <div className="flex items-center gap-3 pt-2">
+        <button
+          type="button"
+          className={btnPrimary()}
+          disabled={saving}
+          onClick={() => void save()}
+        >
+          {t('common.save')}
+        </button>
+        <button
+          type="button"
+          className={btnGhost()}
+          disabled={testing}
+          onClick={() => void runTest()}
+        >
+          {testing ? t('ai.testing') : t('ai.test')}
+        </button>
+        {testResult && (
+          <span className={`text-xs ${testResult.ok ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {testResult.msg}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function SettingsDialog(): React.JSX.Element {
   const close = useApp((s) => s.closeSettings)
   const settings = useApp((s) => s.settings)
   const updateSettings = useApp((s) => s.updateSettings)
+  const initialTab = useApp((s) => s.settingsInitialTab)
+  const [activeTab, setActiveTab] = useState<SettingsTab>(
+    (initialTab as SettingsTab) && TAB_IDS.includes(initialTab as SettingsTab)
+      ? (initialTab as SettingsTab)
+      : 'general'
+  )
   const [interval, setIntervalValue] = useState(settings.autoFetchInterval)
   const [prune, setPrune] = useState(settings.autoPrune)
   const [notifications, setNotifications] = useState(settings.notifications)
@@ -102,96 +284,157 @@ export function SettingsDialog(): React.JSX.Element {
     }
   }
 
+  const tabs: Array<{
+    id: SettingsTab
+    label: string
+    icon: Parameters<typeof FontAwesomeIcon>[0]['icon']
+  }> = [
+    { id: 'general', label: t('settings.tabGeneral'), icon: faGear },
+    { id: 'ai', label: t('settings.tabAi'), icon: faWandMagicSparkles },
+    { id: 'integrations', label: t('settings.tabIntegrations'), icon: faCloud },
+    { id: 'profiles', label: t('settings.tabProfiles'), icon: faUser },
+    { id: 'terminal', label: t('settings.tabTerminal'), icon: faTerminal },
+    { id: 'advanced', label: t('settings.tabAdvanced'), icon: faCodeBranch },
+    { id: 'tools', label: t('settings.tabTools'), icon: faWrench }
+  ]
+
   return (
     <Modal
       title={t('settings.title')}
       onClose={close}
+      maxWidth="max-w-4xl"
+      bodyClassName="p-0 overflow-hidden"
       footer={
         <button className={btnPrimary()} disabled={saving} onClick={() => void save()}>
           {t('common.confirm')}
         </button>
       }
     >
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-2">
-          <div className="text-sm font-semibold text-zinc-200">{t('settings.theme')}</div>
-          <div className="flex gap-2">
-            {(['system', 'dark', 'light'] as const).map((mode) => (
-              <button
-                key={mode}
-                className={`flex-1 rounded px-3 py-1.5 text-xs font-medium transition ${
-                  settings.theme === mode
-                    ? 'bg-zinc-700 text-zinc-100 shadow'
-                    : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
-                }`}
-                onClick={() => void updateSettings({ theme: mode })}
-                data-testid={`theme-${mode}`}
-              >
-                {t(
-                  mode === 'system'
-                    ? 'settings.themeSystem'
-                    : mode === 'dark'
-                      ? 'settings.themeDark'
-                      : 'settings.themeLight'
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="text-sm font-semibold text-zinc-200">{t('settings.autoFetch')}</div>
-          <div className="text-xs text-zinc-500">{t('settings.autoFetchHint')}</div>
-          <label className="flex items-center gap-2 text-sm text-zinc-300">
-            <span>{t('settings.autoFetchInterval')}</span>
-            <select
-              className={`${inputClass()} w-32`}
-              value={interval}
-              onChange={(e) => setIntervalValue(Number(e.target.value))}
+      <div className="flex h-[520px] divide-x divide-zinc-800">
+        {/* Left tabs column */}
+        <div className="w-44 shrink-0 bg-zinc-950/50 p-2 space-y-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={`flex w-full items-center gap-2.5 rounded px-3 py-2 text-xs font-medium transition text-left cursor-pointer ${
+                activeTab === tab.id
+                  ? 'bg-zinc-800 text-emerald-400 shadow-sm'
+                  : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
+              }`}
+              onClick={() => setActiveTab(tab.id)}
+              data-testid={`settings-tab-${tab.id}`}
             >
-              {INTERVALS.map((m) => (
-                <option key={m} value={m}>
-                  {m === 0
-                    ? t('settings.autoFetchOff')
-                    : tf('settings.autoFetchMinutes', { n: m })}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-zinc-300">
-            <input
-              type="checkbox"
-              checked={prune}
-              onChange={(e) => setPrune(e.target.checked)}
-            />
-            <span>{t('settings.autoPrune')}</span>
-          </label>
+              <FontAwesomeIcon
+                icon={tab.icon}
+                className={`h-3.5 w-3.5 shrink-0 ${activeTab === tab.id ? 'text-emerald-400' : 'text-zinc-500'}`}
+              />
+              <span className="truncate">{tab.label}</span>
+            </button>
+          ))}
         </div>
 
-        <div className="flex flex-col gap-2">
-          <div className="text-sm font-semibold text-zinc-200">{t('settings.notifications')}</div>
-          <div className="text-xs text-zinc-500">{t('settings.notificationsHint')}</div>
-          <label className="flex items-center gap-2 text-sm text-zinc-300">
-            <input
-              type="checkbox"
-              checked={notifications}
-              onChange={(e) => setNotifications(e.target.checked)}
-            />
-            <span>{t('settings.notifications')}</span>
-          </label>
-        </div>
+        {/* Right content column */}
+        <div className="flex-1 min-w-0 p-5 overflow-y-auto">
+          {activeTab === 'general' && (
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2">
+                <div className="text-sm font-semibold text-zinc-200">{t('settings.theme')}</div>
+                <div className="flex gap-2">
+                  {(['system', 'dark', 'light'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      className={`flex-1 rounded px-3 py-1.5 text-xs font-medium transition ${
+                        settings.theme === mode
+                          ? 'bg-zinc-700 text-zinc-100 shadow'
+                          : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                      }`}
+                      onClick={() => void updateSettings({ theme: mode })}
+                      data-testid={`theme-${mode}`}
+                    >
+                      {t(
+                        mode === 'system'
+                          ? 'settings.themeSystem'
+                          : mode === 'dark'
+                            ? 'settings.themeDark'
+                            : 'settings.themeLight'
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-        <ActivityLog />
-        <ProfilesSection />
-        <IntegrationsSection />
-        <TerminalSection />
-        <HooksSection />
-        <LfsSection />
-        <GitflowSection />
-        <SigningSection />
-        <ExternalToolsSection />
-        <RepoSettingsSection />
-        <SubmoduleSection />
+              <div className="flex flex-col gap-2">
+                <div className="text-sm font-semibold text-zinc-200">{t('settings.autoFetch')}</div>
+                <div className="text-xs text-zinc-500">{t('settings.autoFetchHint')}</div>
+                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                  <span>{t('settings.autoFetchInterval')}</span>
+                  <select
+                    className={`${inputClass()} w-32`}
+                    value={interval}
+                    onChange={(e) => setIntervalValue(Number(e.target.value))}
+                  >
+                    {INTERVALS.map((m) => (
+                      <option key={m} value={m}>
+                        {m === 0
+                          ? t('settings.autoFetchOff')
+                          : tf('settings.autoFetchMinutes', { n: m })}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={prune}
+                    onChange={(e) => setPrune(e.target.checked)}
+                  />
+                  <span>{t('settings.autoPrune')}</span>
+                </label>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="text-sm font-semibold text-zinc-200">{t('settings.notifications')}</div>
+                <div className="text-xs text-zinc-500">{t('settings.notificationsHint')}</div>
+                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={notifications}
+                    onChange={(e) => setNotifications(e.target.checked)}
+                  />
+                  <span>{t('settings.notifications')}</span>
+                </label>
+              </div>
+
+              <ActivityLog />
+            </div>
+          )}
+
+          {activeTab === 'ai' && <AiSection />}
+
+          {activeTab === 'integrations' && <IntegrationsSection />}
+
+          {activeTab === 'profiles' && (
+            <div className="flex flex-col gap-6">
+              <ProfilesSection />
+              <SigningSection />
+            </div>
+          )}
+
+          {activeTab === 'terminal' && <TerminalSection />}
+
+          {activeTab === 'advanced' && (
+            <div className="flex flex-col gap-6">
+              <RepoSettingsSection />
+              <GitflowSection />
+              <SubmoduleSection />
+              <LfsSection />
+              <HooksSection />
+            </div>
+          )}
+
+          {activeTab === 'tools' && <ExternalToolsSection />}
+        </div>
       </div>
     </Modal>
   )
@@ -523,20 +766,22 @@ function TerminalSection(): React.JSX.Element {
       <label className="flex items-center gap-2 text-sm text-zinc-300">
         <span className="w-24 shrink-0">{t('terminal.fontSize')}</span>
         <select
-          className={`${inputClass()} w-20`}
+          className={`${inputClass()} w-24`}
           value={fontSize}
           onChange={(e) => setFontSize(Number(e.target.value))}
         >
           {[9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 24].map((n) => (
             <option key={n} value={n}>
-              {n}
+              {n} px
             </option>
           ))}
         </select>
-        <button className={btnPrimary()} disabled={saving} onClick={() => void save()}>
-          {t('common.confirm')}
-        </button>
       </label>
+      <div className="pt-2">
+        <button className={btnPrimary()} disabled={saving} onClick={() => void save()}>
+          {t('common.save')}
+        </button>
+      </div>
     </div>
   )
 }

@@ -115,6 +115,7 @@ interface AppState {
   searchOpen: boolean
   /** Settings dialog visibility (auto-fetch / prune / activity log). */
   settingsOpen: boolean
+  settingsInitialTab?: string
   /** Embedded terminal panel visibility. */
   terminalOpen: boolean
   /** GitProvider / RepoRef detected for current repo. */
@@ -181,7 +182,7 @@ interface AppState {
   closeRebaseDialog(): void
   openSearch(): void
   closeSearch(): void
-  openSettings(): void
+  openSettings(tab?: string): void
   closeSettings(): void
   toggleTerminal(): void
   togglePrPanel(): void
@@ -248,7 +249,7 @@ interface AppState {
   updateSettings(patch: Partial<AppSettingsDto>): Promise<void>
 }
 
-function errText(e: unknown): string {
+export function errText(e: unknown): string {
   let msg = e instanceof Error ? e.message : String(e)
   msg = msg.replace(/^Error invoking remote method '[^']+':\s*/, '')
   msg = msg.replace(/^Error:\s*/, '')
@@ -947,12 +948,12 @@ export const useApp = create<AppState>((set, get) => {
       set({ searchOpen: false })
     },
 
-    openSettings(): void {
-      set({ settingsOpen: true })
+    openSettings(tab?: string): void {
+      set({ settingsOpen: true, settingsInitialTab: tab })
     },
 
     closeSettings(): void {
-      set({ settingsOpen: false })
+      set({ settingsOpen: false, settingsInitialTab: undefined })
     },
 
     toggleTerminal(): void {

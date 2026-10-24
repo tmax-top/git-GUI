@@ -81,6 +81,8 @@ import {
   pickSavePathSchema,
   patchExportRequestSchema,
   patchApplyRequestSchema,
+  aiGenerateCommitMsgSchema,
+  aiTestConnectionSchema,
   type RepoSettingsDto,
   type SubmoduleDetailDto,
   type TerminalCreateDto,
@@ -186,6 +188,7 @@ import { setSigning, signingStatus } from './git/signing'
 import { openExternalTool, toolForKind } from './tools'
 import { cleanOrigFiles, getRepoSettings, repoEncoding, setRepoSettings } from './git/repoConfig'
 import { applyPatch, exportPatch } from './git/patch'
+import { generateAiCommitMessage, testAiConnection } from './ai'
 import {
   setSubmoduleRecurse,
   getSubmoduleRecurse,
@@ -876,6 +879,15 @@ export function registerIpcHandlers(): void {
 
   handle(IPC.patchApply, patchApplyRequestSchema, async (arg): Promise<PatchApplyResultDto> => {
     return applyPatch(arg.repoPath, { patchPath: arg.patchPath, patchContent: arg.patchContent })
+  })
+
+  // --- AI commit assistant --------------------------------------------------
+  handle(IPC.aiGenerateCommitMsg, aiGenerateCommitMsgSchema, async (arg): Promise<string> => {
+    return generateAiCommitMessage(arg)
+  })
+
+  handle(IPC.aiTestConnection, aiTestConnectionSchema, async (arg): Promise<{ success: boolean; message: string }> => {
+    return testAiConnection(arg)
   })
 
   // --- watcher -------------------------------------------------------------

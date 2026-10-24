@@ -50,6 +50,11 @@ export interface AppSettings {
   profiles: import('../shared/ipc').ProfileDto[]
   /** Active profile ID, or null. */
   activeProfileId: string | null
+  /** AI Commit message settings. */
+  aiApiUrl?: string
+  aiApiKey?: string
+  aiModel?: string
+  aiPrompt?: string
 }
 
 export interface SessionState {
@@ -81,7 +86,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   workspaces: [],
   activeWorkspaceId: null,
   profiles: [],
-  activeProfileId: null
+  activeProfileId: null,
+  aiApiUrl: '',
+  aiApiKey: '',
+  aiModel: 'gpt-4o-mini',
+  aiPrompt: ''
 }
 
 const DEFAULT_SESSION: SessionState = {
