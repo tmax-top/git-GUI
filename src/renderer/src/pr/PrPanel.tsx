@@ -100,7 +100,7 @@ export function PrPanel(): React.JSX.Element | null {
       role="presentation"
     >
       <div
-        className="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 shadow-2xl"
+        className="flex h-[88vh] w-[94vw] max-w-6xl flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label={t('pr.title')}
@@ -246,38 +246,42 @@ export function PrPanel(): React.JSX.Element | null {
               ) : (
                 <div className="flex flex-1 flex-col p-4">
                   {/* PR Header */}
-                  <div className="border-b border-zinc-800 pb-4">
+                  <div className="border-b border-zinc-800 pb-4 flex flex-col gap-3">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm text-zinc-400">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-sm font-semibold text-zinc-400">
                             #{activePrDetail.number}
                           </span>
-                          <h2 className="text-base font-semibold text-zinc-100" data-testid="pr-detail-title">
+                          <h2 className="text-base font-semibold text-zinc-100 break-words" data-testid="pr-detail-title">
                             {activePrDetail.title}
                           </h2>
-                          {stateBadge(activePrDetail.state, activePrDetail.draft)}
+                          <span className="shrink-0">{stateBadge(activePrDetail.state, activePrDetail.draft)}</span>
                         </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+                        <div className="mt-2 flex flex-wrap items-center gap-2.5 text-xs text-zinc-400">
                           <span>{tf('pr.createdBy', { name: activePrDetail.author.name })}</span>
-                          <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[11px] text-zinc-300">
-                            {activePrDetail.sourceBranch} → {activePrDetail.targetBranch}
+                          <span className="inline-flex items-center gap-1.5 rounded bg-zinc-800/90 px-2 py-0.5 font-mono text-[11px] text-zinc-300">
+                            <span className="text-zinc-200">{activePrDetail.sourceBranch}</span>
+                            <span className="text-zinc-500">→</span>
+                            <span className="text-zinc-200">{activePrDetail.targetBranch}</span>
                           </span>
                           <a
                             href={activePrDetail.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-sky-400 hover:underline"
+                            className="text-sky-400 hover:text-sky-300 hover:underline"
                           >
                             {t('pr.openInBrowser')} ↗
                           </a>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Top Action buttons */}
+                    {/* Action Toolbar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-zinc-800/60">
                       <div className="flex items-center gap-2">
                         <button
-                          className={btnGhost()}
+                          className={`${btnGhost()} shrink-0 whitespace-nowrap text-xs px-3 py-1.5`}
                           onClick={() => void handleCheckout()}
                           disabled={checkoutBusy}
                           title={t('pr.checkout')}
@@ -285,28 +289,29 @@ export function PrPanel(): React.JSX.Element | null {
                         >
                           {checkoutBusy ? '…' : t('pr.checkout')}
                         </button>
-                        {activePrDetail.state === 'open' && (
-                          <div className="flex items-center gap-1">
-                            <select
-                              className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-zinc-200"
-                              value={mergeMethod}
-                              onChange={(e) => setMergeMethod(e.target.value as PrMergeMethod)}
-                            >
-                              <option value="merge">{t('pr.mergeMethod.merge')}</option>
-                              <option value="squash">{t('pr.mergeMethod.squash')}</option>
-                              <option value="rebase">{t('pr.mergeMethod.rebase')}</option>
-                            </select>
-                            <button
-                              className={btnPrimary()}
-                              onClick={() => void handleMerge()}
-                              disabled={merging}
-                              data-testid="pr-merge-btn"
-                            >
-                              {merging ? '…' : t('pr.merge')}
-                            </button>
-                          </div>
-                        )}
                       </div>
+
+                      {activePrDetail.state === 'open' && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <select
+                            className="rounded border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-xs text-zinc-200 outline-none focus:border-emerald-600 shrink-0"
+                            value={mergeMethod}
+                            onChange={(e) => setMergeMethod(e.target.value as PrMergeMethod)}
+                          >
+                            <option value="merge">{t('pr.mergeMethod.merge')}</option>
+                            <option value="squash">{t('pr.mergeMethod.squash')}</option>
+                            <option value="rebase">{t('pr.mergeMethod.rebase')}</option>
+                          </select>
+                          <button
+                            className={`${btnPrimary()} shrink-0 whitespace-nowrap text-xs px-3 py-1.5`}
+                            onClick={() => void handleMerge()}
+                            disabled={merging}
+                            data-testid="pr-merge-btn"
+                          >
+                            {merging ? '…' : t('pr.merge')}
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Tabs switcher */}
