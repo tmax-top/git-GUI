@@ -496,6 +496,30 @@ function TerminalSection(): React.JSX.Element {
           onChange={(e) => setFontFamily(e.target.value)}
         />
       </label>
+      <div className="flex flex-wrap items-center gap-1.5 pl-24 text-xs text-zinc-400">
+        <span className="text-[11px] text-zinc-500">{t('terminal.presets')}:</span>
+        <button
+          type="button"
+          className="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[11px] hover:bg-zinc-700 hover:text-zinc-200"
+          onClick={() => setFontFamily('Menlo, Monaco, monospace')}
+        >
+          Menlo (macOS)
+        </button>
+        <button
+          type="button"
+          className="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[11px] hover:bg-zinc-700 hover:text-zinc-200"
+          onClick={() => setFontFamily('"Cascadia Code", Consolas, monospace')}
+        >
+          Cascadia Code
+        </button>
+        <button
+          type="button"
+          className="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[11px] hover:bg-zinc-700 hover:text-zinc-200"
+          onClick={() => setFontFamily('"JetBrains Mono", monospace')}
+        >
+          JetBrains Mono
+        </button>
+      </div>
       <label className="flex items-center gap-2 text-sm text-zinc-300">
         <span className="w-24 shrink-0">{t('terminal.fontSize')}</span>
         <select

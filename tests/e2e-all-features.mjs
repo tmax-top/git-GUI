@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { writeFileSync } from 'node:fs'
 
 const PORT = 9223

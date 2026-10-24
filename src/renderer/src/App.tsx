@@ -14,7 +14,7 @@ export default function App(): React.JSX.Element {
   const view = useApp((s) => s.view)
 
   useEffect(() => {
-    if (import.meta.env.DEV) {
+    if (process.env.NODE_ENV !== 'production') {
       ;(window as unknown as { useApp: typeof useApp }).useApp = useApp
     }
     void useApp.getState().boot()

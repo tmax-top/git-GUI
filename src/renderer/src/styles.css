@@ -218,3 +218,17 @@ body[data-theme='dark'] {
 :root[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
   background: #52525b;
 }
+
+/* ---------------------------------------------------------------------------
+ * Embedded xterm terminal font & cell layout rules.
+ * Enforces crisp monospace font metrics and neutralizes proportional spacing.
+ * ------------------------------------------------------------------------- */
+.xterm {
+  font-family: ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", "Fira Code", Consolas, "PingFang SC", "Microsoft YaHei", monospace !important;
+}
+
+.xterm .xterm-screen,
+.xterm .xterm-rows {
+  font-family: inherit !important;
+  letter-spacing: 0 !important;
+}

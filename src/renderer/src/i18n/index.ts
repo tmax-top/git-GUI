@@ -386,7 +386,8 @@ export const zh = {
   'terminal.close': '关闭标签',
   'terminal.exited': '进程已退出（代码 {n}）',
   'terminal.fontFamily': '字体',
-  'terminal.fontFamilyPlaceholder': '留空使用默认字体',
+  'terminal.fontFamilyPlaceholder': '留空使用默认等宽 (Menlo / Cascadia Code)',
+  'terminal.presets': '推荐字体',
   'terminal.fontSize': '字号',
   'terminal.noRepoHint': '未打开仓库时终端使用主目录。',
 
@@ -896,7 +897,8 @@ export const en = {
   'terminal.close': 'Close tab',
   'terminal.exited': 'Process exited (code {n})',
   'terminal.fontFamily': 'Font family',
-  'terminal.fontFamilyPlaceholder': 'Empty = default font',
+  'terminal.fontFamilyPlaceholder': 'Empty = default monospace (Menlo / Cascadia Code)',
+  'terminal.presets': 'Presets',
   'terminal.fontSize': 'Font size',
   'terminal.noRepoHint': 'The terminal uses your home folder when no repository is open.',
 

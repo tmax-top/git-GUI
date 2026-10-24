@@ -23,6 +23,9 @@ interface Instance {
 /** Cap for output that arrives before its xterm instance exists. */
 const MAX_BUFFER = 256 * 1024
 
+export const DEFAULT_TERMINAL_FONT_FAMILY =
+  'ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", "Fira Code", Consolas, "PingFang SC", "Microsoft YaHei", monospace'
+
 /**
  * Bottom-anchored embedded terminal (node-pty + xterm). Multiple tabs, each
  * one pty session; hidden when closed but sessions stay alive until the panel
@@ -90,9 +93,14 @@ export function TerminalPanel(): React.JSX.Element {
       if (instances.current.has(tab.key)) continue
       const el = containers.current.get(tab.key)
       if (!el) continue
+      const resolvedFont = fontFamily?.trim() || DEFAULT_TERMINAL_FONT_FAMILY
       const term = new Terminal({
-        fontFamily: fontFamily || undefined,
-        fontSize,
+        fontFamily: resolvedFont,
+        fontSize: fontSize || 13,
+        lineHeight: 1.25,
+        letterSpacing: 0,
+        fontWeight: 'normal',
+        fontWeightBold: 'bold',
         cursorBlink: true,
         scrollback: 5000,
         theme: {
@@ -172,9 +180,12 @@ export function TerminalPanel(): React.JSX.Element {
 
   // Font settings apply live.
   useEffect(() => {
+    const resolvedFont = fontFamily?.trim() || DEFAULT_TERMINAL_FONT_FAMILY
     for (const inst of instances.current.values()) {
-      inst.term.options.fontFamily = fontFamily || undefined
-      inst.term.options.fontSize = fontSize
+      inst.term.options.fontFamily = resolvedFont
+      inst.term.options.fontSize = fontSize || 13
+      inst.term.options.lineHeight = 1.25
+      inst.term.options.letterSpacing = 0
     }
     fitActive()
   }, [fontFamily, fontSize, fitActive])
