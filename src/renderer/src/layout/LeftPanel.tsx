@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useApp } from '../store'
 import { t, tf } from '../i18n'
+import type { WorktreeInfoDto } from '@shared/ipc'
 
 function Section(props: {
   title: string
@@ -92,6 +93,7 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
   const openCreatePr = useApp((s) => s.openCreatePr)
   const selectPr = useApp((s) => s.selectPr)
   const [error, setError] = useState<string | null>(null)
+  const [worktrees, setWorktrees] = useState<WorktreeInfoDto[]>([])
 
   const local = (refs?.branches ?? []).filter((b) => !b.isRemote)
   const remote = (refs?.branches ?? []).filter((b) => b.isRemote)
@@ -99,6 +101,32 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
   const stashes = refs?.stashes ?? []
   const submodules = refs?.submodules ?? []
   const current = refs?.current
+
+  useEffect(() => {
+    let alive = true
+    const p = repoPath
+      ? window.api.worktreeList(repoPath)
+      : Promise.resolve<WorktreeInfoDto[]>([])
+    void p
+      .then((list) => {
+        if (alive) setWorktrees(list)
+      })
+      .catch(() => {
+        if (alive) setWorktrees([])
+      })
+    return () => {
+      alive = false
+    }
+  }, [repoPath])
+
+  const refreshWorktrees = async (): Promise<void> => {
+    if (!repoPath) return
+    try {
+      setWorktrees(await window.api.worktreeList(repoPath))
+    } catch {
+      /* keep previous list */
+    }
+  }
 
   const doCheckout = (target: string): void => {
     setError(null)
@@ -132,6 +160,32 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
           onClick: () => void rebase(name)
         },
         { separator: true },
+        {
+          label: t('menu.worktreeAdd'),
+          disabled: !repoPath,
+          onClick: () => {
+            const parent = repoPath ? repoPath.replace(/\/[^/]+\/?$/, '/') : ''
+            const base = repoPath ? repoPath.split('/').filter(Boolean).pop() : 'repo'
+            const dir = name.replace(/\//g, '-')
+            setPrompt({
+              title: t('prompt.worktreeTitle'),
+              label: t('prompt.worktreePath'),
+              defaultValue: `${parent}${base}-${dir}`,
+              confirmLabel: t('common.confirm'),
+              onSubmit: async (path) => {
+                if (!repoPath) return
+                setError(null)
+                try {
+                  await window.api.worktreeAdd({ repoPath, path: path.trim(), startPoint: name })
+                  await useApp.getState().refreshAll()
+                  await refreshWorktrees()
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : String(err))
+                }
+              }
+            })
+          }
+        },
         {
           label: t('menu.rename'),
           onClick: () =>
@@ -227,6 +281,62 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
     })
   }
 
+  const onWorktreeContextMenu = (e: React.MouseEvent, w: WorktreeInfoDto): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    const isMain = repoPath != null && w.path.replace(/\/$/, '') === repoPath.replace(/\/$/, '')
+    openMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        {
+          label: t('menu.worktreeRemove'),
+          danger: true,
+          disabled: isMain,
+          onClick: () =>
+            setConfirm({
+              title: t('menu.worktreeRemove'),
+              body: tf('menu.worktreeRemoveConfirm', { path: w.path }),
+              confirmLabel: t('menu.worktreeRemove'),
+              danger: true,
+              onConfirm: async () => {
+                try {
+                  await window.api.worktreeRemove({ repoPath: repoPath ?? '', path: w.path })
+                  await refreshWorktrees()
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : String(err))
+                }
+              }
+            })
+        },
+        {
+          label: t('menu.worktreeRemoveForce'),
+          danger: true,
+          disabled: isMain,
+          onClick: () =>
+            setConfirm({
+              title: t('menu.worktreeRemoveForce'),
+              body: tf('menu.worktreeRemoveConfirm', { path: w.path }),
+              confirmLabel: t('menu.worktreeRemoveForce'),
+              danger: true,
+              onConfirm: async () => {
+                try {
+                  await window.api.worktreeRemove({
+                    repoPath: repoPath ?? '',
+                    path: w.path,
+                    force: true
+                  })
+                  await refreshWorktrees()
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : String(err))
+                }
+              }
+            })
+        }
+      ]
+    })
+  }
+
   return (
     <aside
       className="theme-cream shrink-0 overflow-y-auto border-r border-zinc-800 bg-zinc-950 pb-4"
@@ -288,6 +398,27 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
       <Section title={t('left.submodules')} count={submodules.length}>
         {submodules.map((s) => (
           <Row key={s.path} label={s.path} badge={s.status.trim() || '='} badgeColor="#0f766e" />
+        ))}
+      </Section>
+
+      <Section title={t('left.worktrees')} count={worktrees.length} alwaysShow defaultOpen>
+        {worktrees.map((w) => (
+          <Row
+            key={w.path}
+            label={w.bare ? w.path : (w.branch ?? w.path)}
+            title={w.path}
+            badge={
+              w.locked
+                ? 'locked'
+                : w.prunable
+                  ? 'prunable'
+                  : w.branch
+                    ? undefined
+                    : 'detached'
+            }
+            badgeColor="#7c3aed"
+            onContextMenu={(e) => onWorktreeContextMenu(e, w)}
+          />
         ))}
       </Section>
 
