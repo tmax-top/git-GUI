@@ -5,6 +5,7 @@ import type {
   ProviderAccountDto,
   PullRequestDetailDto,
   PullRequestDto,
+  RemoteRepoDto,
   RepoRef,
   PrState
 } from '../../shared/providers'
@@ -103,6 +104,33 @@ export class GitHubProvider implements GitProvider {
       authType: 'pat',
       createdAt: new Date().toISOString()
     }
+  }
+
+  async listRepositories(token: string): Promise<RemoteRepoDto[]> {
+    const res = await ghFetch(
+      '/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator,organization_member',
+      token
+    )
+    const list = (await res.json()) as Array<{
+      id: number
+      name: string
+      full_name: string
+      clone_url: string
+      ssh_url?: string
+      default_branch?: string
+      private?: boolean
+      description?: string
+    }>
+    return (list ?? []).map((r) => ({
+      id: String(r.id),
+      name: r.name,
+      fullName: r.full_name,
+      cloneUrl: r.clone_url,
+      sshUrl: r.ssh_url,
+      defaultBranch: r.default_branch,
+      isPrivate: Boolean(r.private),
+      description: r.description ?? undefined
+    }))
   }
 
   async listPullRequests(ref: RepoRef, token: string, state: PrState | 'all' = 'open'): Promise<PullRequestDto[]> {

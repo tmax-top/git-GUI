@@ -31,6 +31,7 @@ import type {
   ProviderKind,
   PullRequestDto,
   PullRequestDetailDto,
+  RemoteRepoDto,
   CreatePrInputDto,
   PrState,
   PrMergeMethod,
@@ -249,6 +250,7 @@ export interface GitGuiApi {
   terminalKill(args: { id: string }): Promise<void>
 
   providerListAccounts(): Promise<ProviderAccountDto[]>
+  providerListRepos(args: { provider: ProviderKind; org?: string }): Promise<RemoteRepoDto[]>
   providerConnectPat(args: { provider: ProviderKind; token: string; org?: string }): Promise<ProviderAccountDto>
   providerDisconnect(args: { provider: ProviderKind }): Promise<void>
   providerDetectRepoRef(args: { repoPath: string }): Promise<RepoRef | null>
@@ -368,6 +370,7 @@ const api: GitGuiApi = {
   terminalKill: (args) => ipcRenderer.invoke(IPC.terminalKill, args),
 
   providerListAccounts: () => ipcRenderer.invoke(IPC.providerListAccounts),
+  providerListRepos: (args) => ipcRenderer.invoke(IPC.providerListRepos, args),
   providerConnectPat: (args) => ipcRenderer.invoke(IPC.providerConnectPat, args),
   providerDisconnect: (args) => ipcRenderer.invoke(IPC.providerDisconnect, args),
   providerDetectRepoRef: (args) => ipcRenderer.invoke(IPC.providerDetectRepoRef, args),

@@ -67,6 +67,7 @@ import {
   terminalWriteRequestSchema,
   terminalResizeRequestSchema,
   terminalKillRequestSchema,
+  providerListReposSchema,
   providerConnectPatSchema,
   providerDisconnectSchema,
   providerDetectRepoRefSchema,
@@ -111,7 +112,8 @@ import type {
   UndoApplyResultDto,
   UndoSnapshotDto,
   UndoStackStateDto,
-  WorktreeInfoDto
+  WorktreeInfoDto,
+  RemoteRepoDto
 } from '../shared/ipc'
 import {
   addToGitignore,
@@ -210,6 +212,7 @@ import {
   getPullRequest,
   listProviderAccounts,
   listPullRequests,
+  listRemoteRepositories,
   mergePullRequest
 } from './providers'
 
@@ -824,6 +827,10 @@ export function registerIpcHandlers(): void {
   // --- git providers & pull requests ----------------------------------------
   handle(IPC.providerListAccounts, z.void(), async (): Promise<ProviderAccountDto[]> => {
     return listProviderAccounts()
+  })
+
+  handle(IPC.providerListRepos, providerListReposSchema, async (arg): Promise<RemoteRepoDto[]> => {
+    return listRemoteRepositories(arg.provider, arg.org)
   })
 
   handle(IPC.providerConnectPat, providerConnectPatSchema, async (arg): Promise<ProviderAccountDto> => {

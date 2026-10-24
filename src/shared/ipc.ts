@@ -820,6 +820,11 @@ export interface TerminalExitDto {
 
 export * from './providers'
 
+export const providerListReposSchema = z.object({
+  provider: z.enum(['github', 'azuredevops']),
+  org: z.string().max(256).optional()
+})
+
 export const providerConnectPatSchema = z.object({
   provider: z.enum(['github', 'azuredevops']),
   token: z.string().min(1).max(1024),

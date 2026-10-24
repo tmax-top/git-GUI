@@ -208,4 +208,30 @@ describe('AzureDevOpsProvider', () => {
       }
     })
   })
+
+  it('lists remote repositories for organization', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        value: [
+          {
+            id: 'repo-1',
+            name: 'my-service',
+            remoteUrl: 'https://dev.azure.com/myorg/myproj/_git/my-service',
+            sshUrl: 'git@ssh.dev.azure.com:v3/myorg/myproj/my-service',
+            defaultBranch: 'refs/heads/main',
+            project: { name: 'myproj' }
+          }
+        ]
+      })
+    })
+
+    const repos = await provider.listRepositories(token, { org: 'myorg' })
+    expect(repos).toHaveLength(1)
+    expect(repos[0].name).toBe('my-service')
+    expect(repos[0].fullName).toBe('myproj / my-service')
+    expect(repos[0].cloneUrl).toBe('https://dev.azure.com/myorg/myproj/_git/my-service')
+    expect(repos[0].defaultBranch).toBe('main')
+  })
 })

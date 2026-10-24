@@ -23,6 +23,19 @@ export interface ProviderAccountDto {
   avatarUrl?: string
   authType: 'pat' | 'device-flow'
   createdAt: string
+  org?: string
+}
+
+export interface RemoteRepoDto {
+  id: string
+  name: string
+  fullName: string
+  cloneUrl: string
+  sshUrl?: string
+  defaultBranch?: string
+  isPrivate?: boolean
+  description?: string
+  project?: string
 }
 
 export type PrState = 'open' | 'closed' | 'merged'

@@ -1,7 +1,18 @@
 import { execGit } from '../git/exec'
 import { deleteSecret, getSecret, setSecret } from '../secrets'
 import { loadSettings, updateSettings } from '../settings'
-import { parseRepoRef, type CreatePrInputDto, type PrMergeMethod, type ProviderAccountDto, type ProviderKind, type PullRequestDetailDto, type PullRequestDto, type RepoRef, type PrState } from '../../shared/providers'
+import {
+  parseRepoRef,
+  type CreatePrInputDto,
+  type PrMergeMethod,
+  type ProviderAccountDto,
+  type ProviderKind,
+  type PullRequestDetailDto,
+  type PullRequestDto,
+  type RemoteRepoDto,
+  type RepoRef,
+  type PrState
+} from '../../shared/providers'
 import { AzureDevOpsProvider } from './azuredevops'
 import { GitHubProvider } from './github'
 import type { GitProvider } from './provider'
@@ -71,6 +82,23 @@ export async function disconnectProvider(provider: ProviderKind): Promise<void> 
   const settings = await loadSettings()
   const filtered = (settings.providerAccounts ?? []).filter((a) => a.provider !== provider)
   await updateSettings({ providerAccounts: filtered })
+}
+
+export async function listRemoteRepositories(
+  provider: ProviderKind,
+  org?: string
+): Promise<RemoteRepoDto[]> {
+  const p = providers[provider]
+  if (!p) throw new Error(`未知的 Provider: ${provider}`)
+  const token = await getSecret(`provider:${provider}`)
+  if (!token) {
+    const label = provider === 'github' ? 'GitHub' : 'Azure DevOps'
+    throw new Error(`未连接 ${label} 账号，请在设置中配置个人访问令牌（PAT）`)
+  }
+  const settings = await loadSettings()
+  const account = (settings.providerAccounts ?? []).find((a) => a.provider === provider)
+  const resolvedOrg = org || account?.org
+  return p.listRepositories(token, { org: resolvedOrg })
 }
 
 async function getProviderForRepo(

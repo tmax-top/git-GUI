@@ -5,6 +5,7 @@ import type {
   ProviderAccountDto,
   PullRequestDetailDto,
   PullRequestDto,
+  RemoteRepoDto,
   RepoRef,
   PrState
 } from '../../shared/providers'
@@ -121,14 +122,15 @@ export class AzureDevOpsProvider implements GitProvider {
         username: name,
         displayName: name,
         authType: 'pat',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        org
       }
     }
 
     // Default VSSPS profile endpoint
     try {
       const res = await adoFetch(
-        'https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=${ADO_API_VERSION}',
+        `https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=${ADO_API_VERSION}`,
         token
       )
       const data = (await res.json()) as { displayName?: string; publicAlias?: string; emailAddress?: string }
@@ -150,6 +152,33 @@ export class AzureDevOpsProvider implements GitProvider {
         createdAt: new Date().toISOString()
       }
     }
+  }
+
+  async listRepositories(token: string, options?: { org?: string }): Promise<RemoteRepoDto[]> {
+    const org = options?.org
+    if (!org) return []
+    const url = `https://dev.azure.com/${org}/_apis/git/repositories?api-version=${ADO_API_VERSION}`
+    const res = await adoFetch(url, token)
+    const data = (await res.json()) as {
+      value?: Array<{
+        id: string
+        name: string
+        remoteUrl?: string
+        sshUrl?: string
+        defaultBranch?: string
+        project?: { name?: string }
+      }>
+    }
+    const list = data.value ?? []
+    return list.map((r) => ({
+      id: r.id,
+      name: r.name,
+      fullName: r.project?.name ? `${r.project.name} / ${r.name}` : r.name,
+      cloneUrl: r.remoteUrl ?? `https://dev.azure.com/${org}/${r.project?.name ?? ''}/_git/${r.name}`,
+      sshUrl: r.sshUrl,
+      defaultBranch: (r.defaultBranch ?? '').replace(/^refs\/heads\//, ''),
+      project: r.project?.name
+    }))
   }
 
   async listPullRequests(ref: RepoRef, token: string, state: PrState | 'all' = 'open'): Promise<PullRequestDto[]> {

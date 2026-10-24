@@ -88,6 +88,7 @@ export const IPC = {
   terminalResize: 'terminal:resize',
   terminalKill: 'terminal:kill',
   providerListAccounts: 'provider:listAccounts',
+  providerListRepos: 'provider:listRepos',
   providerConnectPat: 'provider:connectPat',
   providerDisconnect: 'provider:disconnect',
   providerDetectRepoRef: 'provider:detectRepoRef',
