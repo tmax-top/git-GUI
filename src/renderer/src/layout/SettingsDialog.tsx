@@ -20,7 +20,7 @@ import type {
   SigningStatusDto,
   SubmoduleDetailDto
 } from '@shared/ipc'
-import { useApp } from '../store'
+import { errText, useApp } from '../store'
 import { t, tf, type MessageKey } from '../i18n'
 import { Modal, btnDanger, btnGhost, btnPrimary, inputClass } from '../components/Modal'
 
@@ -130,8 +130,7 @@ function AiSection(): React.JSX.Element {
       })
       setTestResult({ ok: true, msg: t('ai.testSuccess') })
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setTestResult({ ok: false, msg: tf('ai.testFail', { msg }) })
+      setTestResult({ ok: false, msg: tf('ai.testFail', { msg: errText(err) }) })
     } finally {
       setTesting(false)
     }

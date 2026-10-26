@@ -9,6 +9,17 @@ files:
 asar: true
 asarUnpack:
   - '**/node-pty/**'
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
+  artifactName: '${productName}-${version}-mac-${arch}.${ext}'
+  category: public.app-category.developer-tools
+  identity: null
 win:
   target:
     - target: zip

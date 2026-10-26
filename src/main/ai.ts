@@ -2,9 +2,34 @@ import { execGit } from './git/exec'
 import { loadSettings } from './settings'
 import type { AiGenerateCommitMsgInputDto, AiTestConnectionInputDto } from '../shared/ipc'
 
+/**
+ * Normalize a user-entered OpenAI-compatible base URL:
+ * strip an HTTP method prefix (e.g. "POST https://…"), surrounding whitespace,
+ * a trailing slash, and a pasted `/chat/completions` path.
+ * Throws a readable error when the result is not a valid http(s) URL.
+ */
+export function resolveAiBaseUrl(raw: string | undefined, fallback: string): string {
+  const url = (raw?.trim() || fallback)
+    .replace(/^(POST|GET|PUT|PATCH|DELETE)\s+/i, '')
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/chat\/completions\/?$/i, '')
+
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw new Error(`AI 接口地址无效：「${raw?.trim() || url}」，请填写形如 https://api.openai.com/v1 的地址`)
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`AI 接口地址必须是 http(s) 地址：「${url}」`)
+  }
+  return url
+}
+
 export async function generateAiCommitMessage(input: AiGenerateCommitMsgInputDto): Promise<string> {
   const settings = await loadSettings()
-  const apiUrl = (settings.aiApiUrl?.trim() || 'https://api.openai.com/v1').replace(/\/+$/, '')
+  const apiUrl = resolveAiBaseUrl(settings.aiApiUrl, 'https://api.openai.com/v1')
   const apiKey = settings.aiApiKey?.trim() || ''
   const model = settings.aiModel?.trim() || 'gpt-4o-mini'
 
@@ -113,7 +138,7 @@ Follow the Conventional Commits specification:
 export async function testAiConnection(
   input: AiTestConnectionInputDto
 ): Promise<{ success: boolean; message: string }> {
-  const apiUrl = (input.apiUrl?.trim() || 'https://api.openai.com/v1').replace(/\/+$/, '')
+  const apiUrl = resolveAiBaseUrl(input.apiUrl, 'https://api.openai.com/v1')
   const apiKey = input.apiKey?.trim() || ''
   const model = input.model?.trim() || 'gpt-4o-mini'
 
