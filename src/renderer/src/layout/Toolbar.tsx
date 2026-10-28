@@ -23,6 +23,8 @@ import {
 import { useApp } from '../store'
 import { t, tf, type MessageKey } from '../i18n'
 import { btnGhost } from '../components/Modal'
+import { RepoSwitcher } from './RepoSwitcher'
+import { isStaged } from '@shared/status'
 import type { UndoDescriptionDto } from '@shared/ipc'
 
 /** Render an undo-stack label (i18n key + params) as tooltip text. */
@@ -42,7 +44,6 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
   const loadGraph = useApp((s) => s.loadGraph)
   const settings = useApp((s) => s.settings)
   const updateSettings = useApp((s) => s.updateSettings)
-  const closeRepo = useApp((s) => s.closeRepo)
   const openSearch = useApp((s) => s.openSearch)
   const openSettings = useApp((s) => s.openSettings)
   const openWorkspaceModal = useApp((s) => s.openWorkspaceModal)
@@ -67,13 +68,19 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
 
   return (
     <header className="flex shrink-0 items-center gap-2 border-b border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs">
-      <button
-        className="rounded px-2 py-1 font-semibold text-zinc-300 hover:bg-zinc-800"
-        onClick={() => void closeRepo()}
-        title={t('toolbar.close')}
-      >
-        Git GUI
-      </button>
+      <RepoSwitcher variant="logo">
+        {(onClick, ref) => (
+          <button
+            ref={ref}
+            className="rounded px-2 py-1 font-semibold text-zinc-300 hover:bg-zinc-800"
+            onClick={onClick}
+            title={t('repoTabs.switch')}
+            data-testid="toolbar-logo"
+          >
+            Git GUI
+          </button>
+        )}
+      </RepoSwitcher>
 
       <span
         className="rounded bg-zinc-800 px-2 py-1 font-medium text-emerald-400"
@@ -83,7 +90,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
       </span>
 
       {status && (status.ahead > 0 || status.behind > 0) && (
-        <span className="rounded bg-zinc-800 px-1.5 py-1 text-zinc-400">
+        <span className="rounded bg-zinc-800 px-1.5 py-1 text-zinc-400" title={t('toolbar.aheadBehindTip')}>
           ↑{status.ahead} ↓{status.behind}
         </span>
       )}
@@ -121,6 +128,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
         className={`${btnGhost()} flex items-center gap-1.5 px-2.5 py-1 text-xs`}
         disabled={disabled}
         onClick={() => void fetchNow()}
+        title={t('toolbar.fetchTip')}
       >
         <FontAwesomeIcon icon={faCloudArrowDown} className="h-3.5 w-3.5 text-zinc-400" />
         <span>{t('toolbar.fetch')}</span>
@@ -129,7 +137,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
         className={`${btnGhost()} flex items-center gap-1.5 px-2.5 py-1 text-xs`}
         disabled={disabled}
         onClick={() => void pull()}
-        title={!status?.upstream && !status?.detached ? t('toolbar.noUpstream') : t('toolbar.pull')}
+        title={!status?.upstream && !status?.detached ? t('toolbar.noUpstream') : t('toolbar.pullTip')}
       >
         <FontAwesomeIcon icon={faArrowDown} className="h-3.5 w-3.5 text-zinc-400" />
         <span>{t('toolbar.pull')}</span>
@@ -138,6 +146,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
         className="flex items-center gap-1.5 rounded border border-emerald-700 bg-emerald-950/30 px-3 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-900/40 disabled:opacity-50"
         disabled={disabled}
         onClick={() => void push()}
+        title={t('toolbar.pushTip')}
       >
         <FontAwesomeIcon icon={faArrowUp} className="h-3.5 w-3.5 text-emerald-400" />
         <span>{t('toolbar.push')}</span>
@@ -146,7 +155,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
       <button
         className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
         onClick={openSearch}
-        title={`${t('search.title')} (⌘F)`}
+        title={t('toolbar.searchTip')}
       >
         <FontAwesomeIcon icon={faMagnifyingGlass} className="h-3.5 w-3.5" />
       </button>
@@ -197,7 +206,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
           void refreshStatus()
           void loadGraph(true)
         }}
-        title={t('toolbar.refresh')}
+        title={t('toolbar.refreshTip')}
       >
         <FontAwesomeIcon icon={faRotate} className="h-3.5 w-3.5" />
       </button>
@@ -207,19 +216,21 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
       <button
         className={`rounded px-2 py-1 text-xs font-medium transition ${settings.language === 'zh' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'}`}
         onClick={() => void updateSettings({ language: 'zh' })}
+        title={t('toolbar.langZhTip')}
       >
         中
       </button>
       <button
         className={`rounded px-2 py-1 text-xs font-medium transition ${settings.language === 'en' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'}`}
         onClick={() => void updateSettings({ language: 'en' })}
+        title={t('toolbar.langEnTip')}
       >
         EN
       </button>
       <button
         className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition"
         onClick={() => void updateSettings({ theme: settings.theme === 'dark' ? 'light' : 'dark' })}
-        title={t('settings.theme')}
+        title={t('toolbar.themeTip')}
         data-testid="toolbar-theme-toggle"
       >
         <FontAwesomeIcon
@@ -249,7 +260,7 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
       <button
         className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition"
         onClick={() => openSettings()}
-        title={t('toolbar.settings')}
+        title={t('toolbar.settingsTip')}
         data-testid="toolbar-settings"
       >
         <FontAwesomeIcon icon={faGear} className="h-3.5 w-3.5" />
@@ -276,11 +287,11 @@ export const Toolbar = memo(function Toolbar(): React.JSX.Element {
       )}
 
       {!sync && status && (
-        <span className="flex items-center gap-1.5 text-zinc-500 text-xs">
+        <span className="flex items-center gap-1.5 text-zinc-500 text-xs" title={t('toolbar.stagedTip')}>
           <FontAwesomeIcon icon={faBoxArchive} className="h-3 w-3 text-zinc-500" />
           <span>
             {tf('status.staged', {
-              n: status.files.filter((f) => f.indexStatus !== ' ' && f.indexStatus !== '?').length
+              n: status.files.filter(isStaged).length
             })}
           </span>
         </span>

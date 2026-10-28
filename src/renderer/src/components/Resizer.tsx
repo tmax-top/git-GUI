@@ -18,7 +18,9 @@ export function useResizableSetting(
 ): { value: number; onDelta: (delta: number) => void; onCommit: () => void } {
   const raw = useApp((s) => s.settings[key])
   const updateSettings = useApp((s) => s.updateSettings)
-  const value = clamp(typeof raw === 'number' ? raw : fallback, min, max)
+  // Settings are validated as integers by the IPC schema, so keep every value
+  // integral — pointer coordinates can be fractional on HiDPI/zoomed displays.
+  const value = Math.round(clamp(typeof raw === 'number' ? raw : fallback, min, max))
   const [draft, setDraft] = useState<number | null>(null)
   const draftRef = useRef<number | null>(null)
 
@@ -33,7 +35,7 @@ export function useResizableSetting(
   const onDelta = useCallback(
     (delta: number) => {
       const base = draftRef.current ?? value
-      const next = clamp(base + delta, min, max)
+      const next = Math.round(clamp(base + delta, min, max))
       draftRef.current = next
       setDraft(next)
     },

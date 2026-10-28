@@ -88,40 +88,73 @@ Follow the Conventional Commits specification:
     headers['Authorization'] = `Bearer ${apiKey}`
   }
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 45000)
+  /** One chat-completions round-trip; owns its own timeout. */
+  const requestOnce = async (
+    maxTokens: number
+  ): Promise<{ text: string; finishReason?: string; apiError?: string }> => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 45000)
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent }
+          ],
+          temperature: 0.3,
+          max_tokens: maxTokens
+        })
+      })
+
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '')
+        throw new Error(`AI 服务请求失败 (${res.status}): ${errBody || res.statusText}`)
+      }
+
+      const json = (await res.json()) as {
+        choices?: Array<{
+          message?: { content?: string | Array<{ text?: string }> }
+          /** Legacy completions shape. */
+          text?: string
+          finish_reason?: string
+        }>
+        error?: { message?: string }
+      }
+      const choice = json.choices?.[0]
+      const rawContent = choice?.message?.content ?? choice?.text
+      const text = Array.isArray(rawContent)
+        ? rawContent.map((part) => part?.text ?? '').join('')
+        : (rawContent ?? '')
+      return {
+        text: text.trim(),
+        finishReason: choice?.finish_reason,
+        apiError: json.error?.message
+      }
+    } finally {
+      clearTimeout(timeoutId)
+    }
+  }
 
   try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent }
-        ],
-        temperature: 0.3,
-        max_tokens: 500
-      })
-    })
-
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => '')
-      throw new Error(`AI 服务请求失败 (${res.status}): ${errBody || res.statusText}`)
+    // Reasoning models bill their hidden "thinking" against max_tokens, so a
+    // tight cap can be exhausted before any content is emitted — the provider
+    // then answers with an empty message and finish_reason=length. Start with
+    // headroom and retry once with a larger budget when that happens.
+    let result = await requestOnce(2000)
+    if (!result.text && result.finishReason === 'length') {
+      result = await requestOnce(4000)
     }
-
-    const json = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>
-    }
-    const message = json.choices?.[0]?.message?.content?.trim()
-    if (!message) {
-      throw new Error('AI 服务未返回有效的 commit 消息内容')
+    if (!result.text) {
+      const reason = result.finishReason ?? result.apiError ?? 'empty response'
+      throw new Error(`AI 服务未返回有效的 commit 消息内容（finish_reason: ${reason}）`)
     }
 
     // Strip any markdown code fence wrapping if model added it
-    return message
+    return result.text
       .replace(/^```[a-zA-Z]*\n?/, '')
       .replace(/\n?```$/, '')
       .trim()
@@ -130,8 +163,6 @@ Follow the Conventional Commits specification:
       throw new Error('AI 服务请求超时 (45s)', { cause: err })
     }
     throw err
-  } finally {
-    clearTimeout(timeoutId)
   }
 }
 

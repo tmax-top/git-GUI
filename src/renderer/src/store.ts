@@ -25,7 +25,7 @@ import type {
   WorkspaceDto,
   ProfileDto
 } from '@shared/ipc'
-import { isUntracked, stagedFiles, untrackedFiles } from '@shared/status'
+import { isUnstaged, stagedFiles, untrackedFiles } from '@shared/status'
 import { setLocale, t, tf, type Locale, type MessageKey } from './i18n'
 import { applyTheme } from './theme'
 import type { ContextMenuEntry } from './components/ContextMenu'
@@ -87,6 +87,8 @@ interface AppState {
   booted: boolean
   view: 'start' | 'repo'
   repoPath: string | null
+  /** All repositories opened as tabs (last one opened is not necessarily active). */
+  openRepos: string[]
   status: GitStatusDto | null
   refs: RefsDto | null
   commits: CommitDto[]
@@ -145,7 +147,10 @@ interface AppState {
 
   boot(): Promise<void>
   openRepo(path: string): Promise<boolean>
-  closeRepo(): Promise<void>
+  /** Activate an already-open repo tab. No-op when it is the active repo. */
+  switchRepo(path: string): Promise<boolean>
+  /** Close a tab by path (defaults to the active repo); activates another tab if the active one closes. */
+  closeRepo(path?: string): Promise<void>
   refreshAll(): Promise<void>
   refreshStatus(): Promise<void>
   refreshOpState(): Promise<void>
@@ -162,8 +167,8 @@ interface AppState {
 
   stage(paths: string[]): Promise<void>
   unstage(paths: string[]): Promise<void>
-  discard(path: string): Promise<void>
-  clean(path: string): Promise<void>
+  discard(paths: string[]): Promise<void>
+  clean(paths: string[]): Promise<void>
   ignore(path: string): Promise<void>
   stageHunk(file: DiffFile, hunkIndex: number): Promise<void>
   unstageHunk(file: DiffFile, hunkIndex: number): Promise<void>
@@ -417,6 +422,7 @@ export const useApp = create<AppState>((set, get) => {
     booted: false,
     view: 'start',
     repoPath: null,
+    openRepos: [],
     status: null,
     refs: null,
     commits: [],
@@ -515,13 +521,24 @@ export const useApp = create<AppState>((set, get) => {
 
       set({ booted: true })
 
-      // Session restore: reopen last active repo.
-      const target = session.activeRepo ?? session.openRepos[0]
+      // Session restore: keep every repo that still validates as a tab,
+      // then reopen the last active one.
+      const stored = session.openRepos ?? []
+      const validated = await Promise.all(
+        stored.map(async (p) =>
+          ((await window.api.repoValidate(p).catch(() => null))?.isRepo ?? false) ? p : null
+        )
+      )
+      const openRepos = validated.filter((p): p is string => p !== null)
+      set({ openRepos })
+      const target =
+        (session.activeRepo && openRepos.includes(session.activeRepo) && session.activeRepo) ||
+        openRepos[0]
       if (target) {
         const ok = await get().openRepo(target)
         if (ok) return
         // Fall back to the next open repo if the active one vanished.
-        for (const p of session.openRepos) {
+        for (const p of openRepos) {
           if (p !== target && (await get().openRepo(p))) break
         }
       }
@@ -537,8 +554,13 @@ export const useApp = create<AppState>((set, get) => {
         const prev = get().repoPath
         if (prev && prev !== path) await window.api.watchStop(prev)
 
+        const openRepos = get().openRepos.includes(path)
+          ? get().openRepos
+          : [...get().openRepos, path]
+
         set({
           repoPath: path,
+          openRepos,
           view: 'repo',
           status: null,
           refs: null,
@@ -559,7 +581,7 @@ export const useApp = create<AppState>((set, get) => {
           undoInfo: { canUndo: false, canRedo: false }
         })
         await window.api.watchStart(path)
-        void window.api.sessionSet({ openRepos: [path], activeRepo: path })
+        void window.api.sessionSet({ openRepos, activeRepo: path })
         const recents = [path, ...get().settings.recent.filter((p) => p !== path)].slice(0, 20)
         void get().updateSettings({ recent: recents })
         const ref = await window.api.providerDetectRepoRef({ repoPath: path }).catch(() => null)
@@ -574,36 +596,61 @@ export const useApp = create<AppState>((set, get) => {
       }
     },
 
-    async closeRepo(): Promise<void> {
-      const path = get().repoPath
-      if (path) await window.api.watchStop(path)
-      set({
-        view: 'start',
-        repoPath: null,
-        status: null,
-        refs: null,
-        commits: [],
-        selection: { kind: 'wip' },
-        diff: '',
-        diffFiles: [],
-        conflict: null,
-        conflictLoading: false,
-        sync: null,
-        opState: null,
-        menu: null,
-        prompt: null,
-        rebaseDialog: null,
-        searchOpen: false,
-        settingsOpen: false,
-        activeRepoRef: null,
-        prPanelOpen: false,
-        createPrOpen: false,
-        prs: [],
-        activePrId: null,
-        activePrDetail: null,
-        undoInfo: { canUndo: false, canRedo: false }
-      })
-      void window.api.sessionSet({ activeRepo: null })
+    async switchRepo(path: string): Promise<boolean> {
+      if (!get().openRepos.includes(path)) return false
+      if (get().repoPath === path) return true
+      return await get().openRepo(path)
+    },
+
+    async closeRepo(path?: string): Promise<void> {
+      const target = path ?? get().repoPath
+      if (!target) return
+      const remaining = get().openRepos.filter((p) => p !== target)
+      const wasActive = target === get().repoPath
+
+      if (wasActive) {
+        // Activate a neighbour tab (prefer the one that took its place).
+        const next = remaining.length > 0 ? remaining[0] : null
+        set({ openRepos: remaining })
+        if (next) {
+          await get().openRepo(next)
+          return
+        }
+        await window.api.watchStop(target)
+        set({
+          view: 'start',
+          repoPath: null,
+          openRepos: [],
+          status: null,
+          refs: null,
+          commits: [],
+          selection: { kind: 'wip' },
+          diff: '',
+          diffFiles: [],
+          conflict: null,
+          conflictLoading: false,
+          sync: null,
+          opState: null,
+          menu: null,
+          prompt: null,
+          rebaseDialog: null,
+          searchOpen: false,
+          settingsOpen: false,
+          activeRepoRef: null,
+          prPanelOpen: false,
+          createPrOpen: false,
+          prs: [],
+          activePrId: null,
+          activePrDetail: null,
+          undoInfo: { canUndo: false, canRedo: false }
+        })
+        void window.api.sessionSet({ openRepos: [], activeRepo: null })
+        return
+      }
+
+      // Background tab: just drop it from the list.
+      set({ openRepos: remaining })
+      void window.api.sessionSet({ openRepos: remaining, activeRepo: get().repoPath })
     },
 
     async refreshAll(): Promise<void> {
@@ -719,20 +766,20 @@ export const useApp = create<AppState>((set, get) => {
       )
     },
 
-    async discard(path: string): Promise<void> {
+    async discard(paths: string[]): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
       await runMutate(async () => {
-        await window.api.gitDiscard({ repoPath, paths: [path] })
+        await window.api.gitDiscard({ repoPath, paths })
         await get().refreshStatus()
       })
     },
 
-    async clean(path: string): Promise<void> {
+    async clean(paths: string[]): Promise<void> {
       const repoPath = get().repoPath
       if (!repoPath) return
       await runMutate(async () => {
-        await window.api.gitClean({ repoPath, paths: [path] })
+        await window.api.gitClean({ repoPath, paths })
         await get().refreshStatus()
       })
     },
@@ -1497,9 +1544,7 @@ export function fileGroups(status: GitStatusDto | null): {
 } {
   const staged = stagedFiles(status)
   const untracked = untrackedFiles(status)
-  const changes = (status?.files ?? []).filter(
-    (f) => !isUntracked(f) && (f.unmerged || f.worktreeStatus !== '.')
-  )
+  const changes = (status?.files ?? []).filter(isUnstaged)
   return { staged, changes, untracked }
 }
 

@@ -47,7 +47,11 @@ export async function listBranches(repoPath: string, signal?: AbortSignal): Prom
       signal
     })
   ])
-  return [...parseRefs(local.stdout, false), ...parseRefs(remote.stdout, true)]
+  // refs/remotes/<remote>/HEAD is a symref alias for the remote's default
+  // branch. Its short name is just "<remote>", so listing it would surface a
+  // bogus branch called "origin" that cannot be checked out.
+  const remotes = parseRefs(remote.stdout, true).filter((r) => !r.fullName.endsWith('/HEAD'))
+  return [...parseRefs(local.stdout, false), ...remotes]
 }
 
 export async function listTags(repoPath: string, signal?: AbortSignal): Promise<RefInfo[]> {

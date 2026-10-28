@@ -31,7 +31,7 @@ export function statusLetter(f: {
 }): string {
   if (f.untracked) return 'U'
   if (f.unmerged) return '!'
-  const i = f.indexStatus === ' ' ? '' : f.indexStatus
-  const w = f.worktreeStatus === '.' ? '' : f.worktreeStatus
+  const i = f.indexStatus === ' ' || f.indexStatus === '.' ? '' : f.indexStatus
+  const w = f.worktreeStatus === '.' || f.worktreeStatus === ' ' ? '' : f.worktreeStatus
   return (i + w) || 'M'
 }

@@ -1,6 +1,7 @@
 import { useApp } from '../store'
 import { t } from '../i18n'
 import { Toolbar } from './Toolbar'
+import { RepoTabs } from './RepoTabs'
 import { LeftPanel } from './LeftPanel'
 import { StatusBar } from './StatusBar'
 import { OpBanner } from './OpBanner'
@@ -123,6 +124,7 @@ export function AppShell(): React.JSX.Element {
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
       <Toolbar />
+      <RepoTabs />
       <OpBanner />
       <div className="flex min-h-0 flex-1">
         <LeftPanel width={left.value} />

@@ -12,13 +12,15 @@ export function isUnmerged(f: StatusFileDto): boolean {
 export function isStaged(f: StatusFileDto): boolean {
   if (isUnmerged(f)) return true
   if (isUntracked(f)) return false
-  return f.indexStatus !== ' ' && f.indexStatus !== ''
+  // porcelain v2 marks an unchanged side with '.', short format uses ' '
+  return f.indexStatus !== ' ' && f.indexStatus !== '' && f.indexStatus !== '.'
 }
 
 /** Has worktree changes (does not include untracked). */
 export function isUnstaged(f: StatusFileDto): boolean {
   if (isUnmerged(f)) return true
-  return f.worktreeStatus !== '.' && f.worktreeStatus !== '' && !isUntracked(f)
+  if (isUntracked(f)) return false
+  return f.worktreeStatus !== '.' && f.worktreeStatus !== '' && f.worktreeStatus !== ' '
 }
 
 export function stagedFiles(status: GitStatusDto | null): StatusFileDto[] {

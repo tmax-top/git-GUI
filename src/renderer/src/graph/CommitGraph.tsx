@@ -5,6 +5,7 @@ import { useApp } from '../store'
 import { t, tf } from '../i18n'
 import { relativeTime } from '../utils/format'
 import { Resizer, useResizableSetting } from '../components/Resizer'
+import { isStaged } from '@shared/status'
 
 const ROW_H = 28
 const LANE_W = 16
@@ -230,7 +231,7 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
   }, [items, layout, selection, commits, laneColW, totalRows])
 
   const wipCount = (status?.files.length ?? 0) > 0
-  const stagedCount = status?.files.filter((f) => f.indexStatus !== ' ' && f.indexStatus !== '?').length ?? 0
+  const stagedCount = status?.files.filter(isStaged).length ?? 0
 
   const onCommitContextMenu = (e: React.MouseEvent, oid: string): void => {
     e.preventDefault()

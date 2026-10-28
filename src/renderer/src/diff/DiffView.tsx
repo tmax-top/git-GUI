@@ -219,28 +219,32 @@ function HunkView(props: {
           </div>
         </div>
       ) : (
-        <div className="font-mono leading-5">
-          {hunk.lines.map((l, idx) => {
-            const cls =
-              l.type === '+'
-                ? 'bg-emerald-950/50 text-emerald-100'
-                : l.type === '-'
-                  ? 'bg-rose-950/50 text-rose-100'
-                  : l.type === '\\'
-                    ? 'text-zinc-600 italic'
-                    : 'text-zinc-400'
-            return (
-              <div key={idx} className={`flex ${cls}`}>
-                <span className="w-12 shrink-0 select-none border-r border-zinc-800 px-1 text-right text-zinc-600">
-                  {oldNums[idx] ?? ''}
-                </span>
-                <span className="w-12 shrink-0 select-none border-r border-zinc-800 px-1 text-right text-zinc-600">
-                  {newNums[idx] ?? ''}
-                </span>
-                <span className="whitespace-pre px-2">{l.type + (l.content ?? '')}</span>
-              </div>
-            )
-          })}
+        // Unified view: scroll horizontally so long lines stay readable
+        // instead of being clipped by the hunk's rounded border.
+        <div className="overflow-x-auto">
+          <div className="min-w-max font-mono leading-5">
+            {hunk.lines.map((l, idx) => {
+              const cls =
+                l.type === '+'
+                  ? 'bg-emerald-950/50 text-emerald-100'
+                  : l.type === '-'
+                    ? 'bg-rose-950/50 text-rose-100'
+                    : l.type === '\\'
+                      ? 'text-zinc-600 italic'
+                      : 'text-zinc-400'
+              return (
+                <div key={idx} className={`flex ${cls}`}>
+                  <span className="w-12 shrink-0 select-none border-r border-zinc-800 px-1 text-right text-zinc-600">
+                    {oldNums[idx] ?? ''}
+                  </span>
+                  <span className="w-12 shrink-0 select-none border-r border-zinc-800 px-1 text-right text-zinc-600">
+                    {newNums[idx] ?? ''}
+                  </span>
+                  <span className="whitespace-pre px-2">{l.type + (l.content ?? '')}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>

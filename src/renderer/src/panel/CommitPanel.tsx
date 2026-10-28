@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faWandMagicSparkles, faSpinner } from '@fortawesome/free-solid-svg-icons'
+import {
+  faWandMagicSparkles,
+  faSpinner,
+  faPlus,
+  faMinus,
+  faRotateLeft,
+  faXmark,
+  faArrowRight
+} from '@fortawesome/free-solid-svg-icons'
 import { useApp, fileGroups, currentCommit, errText } from '../store'
 import { t, tf } from '../i18n'
 import { fullDate, statusLetter } from '../utils/format'
@@ -37,7 +45,9 @@ function FileRow(props: {
   const open = (): void =>
     selectFile(file.path, variant === 'staged', variant === 'untracked')
 
-  const iconBtn = 'rounded px-1 text-[11px] leading-none opacity-0 group-hover:opacity-100'
+  const iconBtn =
+    'flex items-center rounded px-2 py-1 leading-none opacity-0 group-hover:opacity-100 hover:bg-zinc-700'
+  const icon = 'h-3.5 w-3.5'
 
   return (
     <div
@@ -60,31 +70,31 @@ function FileRow(props: {
         {variant !== 'staged' && (
           <button
             className={`${iconBtn} text-emerald-400 hover:bg-emerald-900/60`}
-            title={t('panel.stage')}
+            title={t('panel.stageTip')}
             onClick={(e) => {
               e.stopPropagation()
               void stage([file.path])
             }}
           >
-            ＋
+            <FontAwesomeIcon icon={faPlus} className={icon} />
           </button>
         )}
         {variant === 'staged' && (
           <button
             className={`${iconBtn} text-amber-400 hover:bg-amber-900/60`}
-            title={t('panel.unstage')}
+            title={t('panel.unstageTip')}
             onClick={(e) => {
               e.stopPropagation()
               void unstage([file.path])
             }}
           >
-            －
+            <FontAwesomeIcon icon={faMinus} className={icon} />
           </button>
         )}
         {variant !== 'staged' && (
           <button
             className={`${iconBtn} text-rose-400 hover:bg-rose-900/60`}
-            title={variant === 'untracked' ? t('panel.clean') : t('panel.discard')}
+            title={variant === 'untracked' ? t('panel.cleanTip') : t('panel.discardTip')}
             onClick={(e) => {
               e.stopPropagation()
               setConfirm({
@@ -96,29 +106,53 @@ function FileRow(props: {
                 confirmLabel: t('common.confirm'),
                 danger: true,
                 onConfirm: async () => {
-                  if (variant === 'untracked') await clean(file.path)
-                  else await discard(file.path)
+                  if (variant === 'untracked') await clean([file.path])
+                  else await discard([file.path])
                 }
               })
             }}
           >
-            {variant === 'untracked' ? '✕' : '⟲'}
+            <FontAwesomeIcon
+              icon={variant === 'untracked' ? faXmark : faRotateLeft}
+              className={icon}
+            />
           </button>
         )}
         {variant === 'untracked' && (
           <button
             className={`${iconBtn} text-zinc-400 hover:bg-zinc-700`}
-            title={t('panel.ignore')}
+            title={t('panel.ignoreTip')}
             onClick={(e) => {
               e.stopPropagation()
               void ignore(file.path)
             }}
           >
-            →
+            <FontAwesomeIcon icon={faArrowRight} className={icon} />
           </button>
         )}
       </span>
     </div>
+  )
+}
+
+type IconProp = React.ComponentProps<typeof FontAwesomeIcon>['icon']
+
+/** Small icon button used for the bulk actions in a section header. */
+function BulkBtn(props: {
+  icon: IconProp
+  label: string
+  tone: string
+  onClick: () => void
+}): React.JSX.Element {
+  return (
+    <button
+      className={`rounded p-1 leading-none opacity-50 transition hover:bg-zinc-700 group-hover:opacity-100 ${props.tone}`}
+      title={props.label}
+      aria-label={props.label}
+      onClick={props.onClick}
+    >
+      <FontAwesomeIcon icon={props.icon} className="h-3 w-3" />
+    </button>
   )
 }
 
@@ -128,18 +162,26 @@ function Section(props: {
   color: string
   children: React.ReactNode
   defaultOpen?: boolean
+  /** Tooltip explaining what this group of files means. */
+  hint?: string
+  /** Bulk actions rendered at the right edge of the header. */
+  actions?: React.ReactNode
 }): React.JSX.Element {
   const [open, setOpen] = useState(props.defaultOpen ?? true)
   return (
     <div>
-      <button
-        className="flex w-full items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide hover:bg-zinc-900"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="text-zinc-500">{open ? '▾' : '▸'}</span>
-        <span className={props.color}>{props.title}</span>
-        <span className="text-zinc-600">({props.count})</span>
-      </button>
+      <div className="group flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide hover:bg-zinc-900">
+        <button
+          className="flex min-w-0 flex-1 items-center gap-1 text-left"
+          onClick={() => setOpen((v) => !v)}
+          title={props.hint}
+        >
+          <span className="text-zinc-500">{open ? '▾' : '▸'}</span>
+          <span className={props.color}>{props.title}</span>
+          <span className="text-zinc-600">({props.count})</span>
+        </button>
+        {props.count > 0 && props.actions}
+      </div>
       {open && <div>{props.count === 0 ? <div className="px-3 py-1 text-[11px] text-zinc-600">{t('left.empty')}</div> : props.children}</div>}
     </div>
   )
@@ -157,6 +199,11 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
   const openPatchModal = useApp((s) => s.openPatchModal)
   const repoPath = useApp((s) => s.repoPath)
   const openSettings = useApp((s) => s.openSettings)
+  const stage = useApp((s) => s.stage)
+  const unstage = useApp((s) => s.unstage)
+  const discard = useApp((s) => s.discard)
+  const clean = useApp((s) => s.clean)
+  const setConfirm = useApp((s) => s.setConfirm)
 
   const [message, setMessage] = useState('')
   const [amend, setAmend] = useState(false)
@@ -196,6 +243,33 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
 
   const groups = fileGroups(status)
   const stagedCount = groups.staged.length
+  const stagedPaths = groups.staged.map((f) => f.path)
+  const changePaths = groups.changes.map((f) => f.path)
+  const untrackedPaths = groups.untracked.map((f) => f.path)
+
+  const discardAll = (): void => {
+    setConfirm({
+      title: t('panel.discardAll'),
+      body: tf('panel.discardAllConfirm', { n: changePaths.length }),
+      confirmLabel: t('common.confirm'),
+      danger: true,
+      onConfirm: async () => {
+        await discard(changePaths)
+      }
+    })
+  }
+
+  const cleanAll = (): void => {
+    setConfirm({
+      title: t('panel.cleanAll'),
+      body: tf('panel.cleanAllConfirm', { n: untrackedPaths.length }),
+      confirmLabel: t('common.confirm'),
+      danger: true,
+      onConfirm: async () => {
+        await clean(untrackedPaths)
+      }
+    })
+  }
 
   if (selection.kind === 'commit') {
     const commit = currentCommit(commits, selection.oid)
@@ -285,6 +359,7 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
         <button
           className="text-xs text-sky-400 hover:underline"
           onClick={() => void exportPatch()}
+          title={t('panel.exportWipTip')}
           data-testid="wip-export-patch-btn"
         >
           {t('patch.exportWip')}
@@ -292,23 +367,79 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
         <button
           className="text-xs text-sky-400 hover:underline"
           onClick={openPatchModal}
+          title={t('panel.applyPatchTip')}
           data-testid="wip-apply-patch-btn"
         >
           {t('patch.apply')}
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        <Section title={t('panel.staged')} count={stagedCount} color="text-emerald-400">
+        <Section
+          title={t('panel.staged')}
+          count={stagedCount}
+          color="text-emerald-400"
+          hint={t('panel.stagedTip')}
+          actions={
+            <BulkBtn
+              icon={faMinus}
+              label={tf('panel.unstageAllTip', { n: stagedCount })}
+              tone="text-amber-400 hover:bg-amber-900/60"
+              onClick={() => void unstage(stagedPaths)}
+            />
+          }
+        >
           {groups.staged.map((f) => (
             <FileRow key={`s:${f.path}`} file={f} variant="staged" />
           ))}
         </Section>
-        <Section title={t('panel.changes')} count={groups.changes.length} color="text-amber-400">
+        <Section
+          title={t('panel.changes')}
+          count={groups.changes.length}
+          color="text-amber-400"
+          hint={t('panel.changesTip')}
+          actions={
+            <>
+              <BulkBtn
+                icon={faPlus}
+                label={tf('panel.stageAllTip', { n: changePaths.length })}
+                tone="text-emerald-400 hover:bg-emerald-900/60"
+                onClick={() => void stage(changePaths)}
+              />
+              <BulkBtn
+                icon={faRotateLeft}
+                label={tf('panel.discardAllTip', { n: changePaths.length })}
+                tone="text-rose-400 hover:bg-rose-900/60"
+                onClick={discardAll}
+              />
+            </>
+          }
+        >
           {groups.changes.map((f) => (
             <FileRow key={`c:${f.path}`} file={f} variant="change" />
           ))}
         </Section>
-        <Section title={t('panel.newFiles')} count={groups.untracked.length} color="text-sky-400">
+        <Section
+          title={t('panel.newFiles')}
+          count={groups.untracked.length}
+          color="text-sky-400"
+          hint={t('panel.newFilesTip')}
+          actions={
+            <>
+              <BulkBtn
+                icon={faPlus}
+                label={tf('panel.stageAllTip', { n: untrackedPaths.length })}
+                tone="text-emerald-400 hover:bg-emerald-900/60"
+                onClick={() => void stage(untrackedPaths)}
+              />
+              <BulkBtn
+                icon={faXmark}
+                label={tf('panel.cleanAllTip', { n: untrackedPaths.length })}
+                tone="text-rose-400 hover:bg-rose-900/60"
+                onClick={cleanAll}
+              />
+            </>
+          }
+        >
           {groups.untracked.map((f) => (
             <FileRow key={`u:${f.path}`} file={f} variant="untracked" />
           ))}
@@ -345,7 +476,7 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
           }}
         />
         <div className="mt-1 flex items-center gap-2 text-[11px] text-zinc-400">
-          <label className="flex cursor-pointer items-center gap-1">
+          <label className="flex cursor-pointer items-center gap-1" title={t('panel.amendTip')}>
             <input
               type="checkbox"
               checked={amend}
@@ -380,7 +511,11 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
           className={`${btnPrimary()} mt-2 w-full`}
           disabled={(!message.trim() && !amend) || committing || (stagedCount === 0 && !amend)}
           onClick={() => void submit()}
-          title={stagedCount === 0 && !amend ? t('panel.nothingStaged') : undefined}
+          title={
+            stagedCount === 0 && !amend
+              ? t('panel.nothingStaged')
+              : tf('panel.commitTip', { n: stagedCount })
+          }
         >
           {committing ? t('panel.committing') : t('panel.commit')}
         </button>

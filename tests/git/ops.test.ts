@@ -97,6 +97,13 @@ describe('ops on real repos', () => {
       expect(names).toContain('main')
       expect(names).toContain('feature')
 
+      // refs/remotes/<remote>/HEAD is a symref alias, not a branch: it must not
+      // show up as a bogus "<remote>" entry in the branch list.
+      git(repo.dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD')
+      git(repo.dir, 'symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/main')
+      const withRemote = await listBranches(repo.dir)
+      expect(withRemote.filter((b) => b.isRemote).map((b) => b.name)).toEqual(['origin/main'])
+
       git(repo.dir, 'tag', 'v1.0.0')
       const tags = await listTags(repo.dir)
       expect(tags.map((t) => t.name)).toContain('v1.0.0')
