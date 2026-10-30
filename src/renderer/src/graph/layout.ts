@@ -9,6 +9,8 @@ export interface GraphSegment {
   toLane: number
   /** converge = extra lanes joining THIS commit's dot; merge/branch live in the gap below. */
   kind: 'converge' | 'merge' | 'branch'
+  /** For merge/branch: the parent commit the segment points at (used for colouring). */
+  parentOid?: string
 }
 
 export interface GraphRow {
@@ -69,7 +71,7 @@ export function layoutGraph(nodes: GraphNodeInput[]): GraphLayout {
         const parent = node.parents[p]
         const existing = lanes.findIndex((l, idx) => idx !== primary && l === parent)
         if (existing >= 0) {
-          segments.push({ row, fromLane: primary, toLane: existing, kind: 'merge' })
+          segments.push({ row, fromLane: primary, toLane: existing, kind: 'merge', parentOid: parent })
         } else {
           let target = lanes.findIndex((l) => l === undefined)
           if (target === -1) {
@@ -78,7 +80,7 @@ export function layoutGraph(nodes: GraphNodeInput[]): GraphLayout {
           } else {
             lanes[target] = parent
           }
-          segments.push({ row, fromLane: primary, toLane: target, kind: 'branch' })
+          segments.push({ row, fromLane: primary, toLane: target, kind: 'branch', parentOid: parent })
         }
       }
     }

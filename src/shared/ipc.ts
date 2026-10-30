@@ -62,6 +62,12 @@ export interface RefInfoDto {
   upstream?: string
   isRemote: boolean
   subject?: string
+  /** Commits ahead of the upstream (unpushed). */
+  ahead?: number
+  /** Commits behind the upstream (unpulled). */
+  behind?: number
+  /** Upstream branch was deleted on the remote. */
+  gone?: boolean
 }
 
 export interface StashInfoDto {
@@ -398,6 +404,24 @@ export const graphRequestSchema = z.object({
 })
 
 export const refsRequestSchema = z.object({ repoPath: repoPathSchema })
+
+/**
+ * Branch names typed in the "new PR" dialog. Reject anything git could parse
+ * as an option (`-x`) or that would corrupt the `base..head` range (`..`).
+ */
+const branchRefSchema = z
+  .string()
+  .min(1)
+  .max(255)
+  .refine((v) => !v.startsWith('-') && !v.includes('..') && !/[\s~^:?*[\\]/.test(v), {
+    message: 'Invalid branch name'
+  })
+
+export const commitRangeRequestSchema = z.object({
+  repoPath: repoPathSchema,
+  base: branchRefSchema,
+  head: branchRefSchema
+})
 
 export const checkoutRequestSchema = z.object({
   repoPath: repoPathSchema,

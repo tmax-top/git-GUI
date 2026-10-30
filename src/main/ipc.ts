@@ -19,6 +19,7 @@ import {
   diffRequestSchema,
   gitStatusRequestSchema,
   graphRequestSchema,
+  commitRangeRequestSchema,
   ignoreRequestSchema,
   initRequestSchema,
   mergeRequestSchema,
@@ -133,6 +134,7 @@ import {
   getUntrackedDiff,
   getStatus,
   getLog,
+  getCommitsBetween,
   initRepo,
   isImagePath,
   isRepo,
@@ -392,6 +394,10 @@ export function registerIpcHandlers(): void {
     })) as CommitDto[]
     const hasMore = commits.length > arg.limit
     return { commits: hasMore ? commits.slice(0, arg.limit) : commits, hasMore }
+  })
+
+  handle(IPC.gitCommitRange, commitRangeRequestSchema, async (arg): Promise<CommitDto[]> => {
+    return (await getCommitsBetween(arg.repoPath, arg.base, arg.head)) as CommitDto[]
   })
 
   handle(IPC.gitRefs, refsRequestSchema, async (arg): Promise<RefsDto> => {

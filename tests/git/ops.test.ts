@@ -81,6 +81,31 @@ describe('ops on real repos', () => {
     }
   })
 
+  it('listBranches reports ahead/behind and gone upstreams', async () => {
+    const repo = makeTempRepo()
+    const remote = mkdtempSync(join(tmpdir(), 'gitgui-remote-'))
+    try {
+      git(remote, 'init', '--bare', '-b', 'main')
+      git(repo.dir, 'commit', '--allow-empty', '-m', 'first')
+      git(repo.dir, 'remote', 'add', 'origin', remote)
+      git(repo.dir, 'push', '-u', 'origin', 'main')
+      git(repo.dir, 'commit', '--allow-empty', '-m', 'second')
+
+      const main = (await listBranches(repo.dir)).find((b) => !b.isRemote && b.name === 'main')
+      expect(main?.ahead).toBe(1)
+      expect(main?.behind).toBeUndefined()
+      expect(main?.gone).toBeUndefined()
+
+      // Deleting the upstream must surface as "gone", not as "in sync".
+      git(repo.dir, 'update-ref', '-d', 'refs/remotes/origin/main')
+      const gone = (await listBranches(repo.dir)).find((b) => !b.isRemote && b.name === 'main')
+      expect(gone?.gone).toBe(true)
+    } finally {
+      repo.cleanup()
+      rmSync(remote, { recursive: true, force: true })
+    }
+  })
+
   it('createBranch / checkout / listBranches / listTags', async () => {
     const repo = makeTempRepo()
     try {

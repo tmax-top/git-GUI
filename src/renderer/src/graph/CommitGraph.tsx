@@ -1,9 +1,10 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { layoutGraph } from './layout'
+import type { GraphSegment } from './layout'
 import { useApp } from '../store'
 import { t, tf } from '../i18n'
-import { relativeTime } from '../utils/format'
+import { commitTimeLabel } from '../utils/format'
 import { Resizer, useResizableSetting } from '../components/Resizer'
 import { isStaged } from '@shared/status'
 
@@ -23,6 +24,13 @@ const LANE_COLORS = [
   '#0e7490',
   '#a21caf'
 ]
+
+/** `origin/main` and `main` must share one colour, so strip the remote name. */
+function branchKey(b: { name: string; isRemote: boolean }): string {
+  if (!b.isRemote) return b.name
+  const slash = b.name.indexOf('/')
+  return slash >= 0 ? b.name.slice(slash + 1) : b.name
+}
 
 // Memoized: AppShell re-renders on every resizer move; this panel is the most
 // expensive subtree (virtualizer + canvas) and takes no props.
@@ -46,13 +54,37 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
   const setPrompt = useApp((s) => s.setPrompt)
 
   const authorCol = useResizableSetting('graphAuthorWidth', 112, 60, 400)
-  const dateCol = useResizableSetting('graphDateWidth', 48, 40, 200)
-  const oidCol = useResizableSetting('graphOidWidth', 40, 40, 160)
+  // Date column needs room for "今天 18:32" / "10-27 15:48"; the oid column for
+  // 8 hex chars. Min values are raised too, so settings saved by older builds
+  // (48 / 40) get clamped up instead of truncating the text.
+  const dateCol = useResizableSetting('graphDateWidth', 96, 88, 220)
+  const oidCol = useResizableSetting('graphOidWidth', 64, 64, 160)
 
   const layout = useMemo(
     () => layoutGraph(commits.map((c) => ({ oid: c.oid, parents: c.parents }))),
     [commits]
   )
+
+  /**
+   * One stable colour per branch name (remote prefix stripped, so `main` and
+   * `origin/main` agree). Hash-based with collision probing: adding a branch
+   * does not reshuffle every other colour.
+   */
+  const refColors = useMemo(() => {
+    const map = new Map<string, string>()
+    const keys = new Set<string>()
+    for (const b of refs?.branches ?? []) keys.add(branchKey(b))
+    const used = new Set<number>()
+    for (const key of [...keys].sort()) {
+      let h = 0
+      for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0
+      let idx = h % LANE_COLORS.length
+      while (used.size < LANE_COLORS.length && used.has(idx)) idx = (idx + 1) % LANE_COLORS.length
+      used.add(idx)
+      map.set(key, LANE_COLORS[idx])
+    }
+    return map
+  }, [refs])
 
   const labelsByOid = useMemo(() => {
     const map = new Map<string, { text: string; color: string }[]>()
@@ -62,12 +94,50 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
       map.set(oid, arr)
     }
     for (const b of refs?.branches ?? []) {
-      if (b.isRemote) push(b.oid, b.name, '#0369a1')
-      else push(b.oid, b.name, '#15803d')
+      push(b.oid, b.name, refColors.get(branchKey(b)) ?? '#0369a1')
     }
     for (const tag of refs?.tags ?? []) push(tag.oid, tag.name, '#b45309')
     return map
-  }, [refs])
+  }, [refs, refColors])
+
+  const segByRow = useMemo(() => {
+    const map = new Map<number, GraphSegment[]>()
+    for (const seg of layout.segments) {
+      const arr = map.get(seg.row) ?? []
+      arr.push(seg)
+      map.set(seg.row, arr)
+    }
+    return map
+  }, [layout])
+
+  /**
+   * Colour of every row's dot plus the colours of the lanes continuing below it.
+   * A commit takes its branch's colour; a lane inherits the colour of the commit
+   * that opened it, so a line keeps its branch colour until that branch ends.
+   */
+  const laneColors = useMemo(() => {
+    const dot: string[] = []
+    const below: string[][] = []
+    const laneColor: (string | undefined)[] = []
+    for (let ci = 0; ci < layout.rows.length; ci++) {
+      const row = layout.rows[ci]
+      const oid = commits[ci]?.oid
+      const refColor = oid ? labelsByOid.get(oid)?.[0]?.color : undefined
+      const c = refColor ?? laneColor[row.lane] ?? LANE_COLORS[row.lane % LANE_COLORS.length]
+      laneColor[row.lane] = c
+      dot[ci] = c
+      // Lanes opened by a merge/branch take the colour of the parent's branch.
+      for (const seg of segByRow.get(ci) ?? []) {
+        if (!seg.parentOid) continue
+        const parentColor = labelsByOid.get(seg.parentOid)?.[0]?.color
+        if (parentColor) laneColor[seg.toLane] = parentColor
+      }
+      below[ci] = row.activeBelow.map(
+        (lane) => laneColor[lane] ?? LANE_COLORS[lane % LANE_COLORS.length]
+      )
+    }
+    return { dot, below }
+  }, [layout, commits, labelsByOid, segByRow])
 
   const totalRows = commits.length + 1
   const parentRef = useRef<HTMLDivElement>(null)
@@ -138,7 +208,7 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
 
     const cx = (lane: number): number => PAD_X + lane * LANE_W + LANE_W / 2
     const yOf = (virtualIndex: number): number => (virtualIndex - first) * ROW_H + ROW_H / 2
-    const color = (lane: number): string => LANE_COLORS[lane % LANE_COLORS.length]
+    const fallback = (lane: number): string => LANE_COLORS[lane % LANE_COLORS.length]
 
     ctx.lineCap = 'round'
 
@@ -150,7 +220,7 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
       if (i === 0) {
         // WIP node → connects down to the first commit on lane 0.
         if (commits.length > 0 && first <= 1) {
-          ctx.strokeStyle = color(0)
+          ctx.strokeStyle = laneColors.dot[0] ?? fallback(0)
           ctx.lineWidth = 2
           ctx.beginPath()
           ctx.moveTo(cx(0), y + RADIUS)
@@ -163,33 +233,36 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
       const ci = i - 1
       const row = layout.rows[ci]
       if (!row) continue
+      const rowSegments = segByRow.get(ci) ?? []
 
       // Vertical continuations in the gap below this row — skipped for lanes a
       // branch segment is opening in this same gap (the curve is the only
       // connector there; a parallel vertical would leave a free-floating tip).
       if (i < totalRows - 1) {
         const branchOpened = new Set(
-          layout.segments.filter((s) => s.row === ci && s.kind === 'branch').map((s) => s.toLane)
+          rowSegments.filter((s) => s.kind === 'branch').map((s) => s.toLane)
         )
-        for (const lane of row.activeBelow) {
-          if (branchOpened.has(lane)) continue
-          ctx.strokeStyle = color(lane)
+        row.activeBelow.forEach((lane, k) => {
+          if (branchOpened.has(lane)) return
+          ctx.strokeStyle = laneColors.below[ci]?.[k] ?? fallback(lane)
           ctx.lineWidth = 2
           ctx.beginPath()
           ctx.moveTo(cx(lane), y)
           ctx.lineTo(cx(lane), y + ROW_H)
           ctx.stroke()
-        }
+        })
       }
 
       // Segments: converge joins extra lanes into this commit's dot (same row);
       // merge/branch live in the gap below.
-      for (const seg of layout.segments) {
-        if (seg.row !== ci) continue
+      for (const seg of rowSegments) {
         const x1 = cx(seg.fromLane)
         const x2 = cx(seg.toLane)
+        const parentColor = seg.parentOid
+          ? labelsByOid.get(seg.parentOid)?.[0]?.color
+          : undefined
         if (seg.kind === 'converge') {
-          ctx.strokeStyle = color(seg.fromLane)
+          ctx.strokeStyle = laneColors.dot[ci] ?? fallback(seg.fromLane)
           ctx.lineWidth = 2
           ctx.beginPath()
           ctx.moveTo(x1, y)
@@ -199,7 +272,7 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
           continue
         }
         const y2 = y + ROW_H
-        ctx.strokeStyle = color(seg.fromLane)
+        ctx.strokeStyle = parentColor ?? laneColors.dot[ci] ?? fallback(seg.fromLane)
         ctx.lineWidth = 2
         ctx.beginPath()
         ctx.moveTo(x1, y)
@@ -212,23 +285,24 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
         ctx.stroke()
       }
 
-      // Commit dot — solid filled circle (branch-head style).
+      // Commit dot — solid filled circle. Selection adds a crisp ring instead
+      // of a translucent halo, which used to read as a hollow (merge) node.
       const isSelected = selection.kind === 'commit' && selection.oid === row.oid
+      const r = isSelected ? RADIUS + 1 : RADIUS
+      const dotColor = laneColors.dot[ci] ?? fallback(row.lane)
       ctx.beginPath()
-      ctx.arc(cx(row.lane), y, isSelected ? RADIUS + 1 : RADIUS, 0, Math.PI * 2)
-      ctx.fillStyle = color(row.lane)
+      ctx.arc(cx(row.lane), y, r, 0, Math.PI * 2)
+      ctx.fillStyle = dotColor
       ctx.fill()
       if (isSelected) {
         ctx.beginPath()
-        ctx.arc(cx(row.lane), y, RADIUS + 3.5, 0, Math.PI * 2)
+        ctx.arc(cx(row.lane), y, r + 3, 0, Math.PI * 2)
         ctx.lineWidth = 1.5
-        ctx.strokeStyle = color(row.lane)
-        ctx.globalAlpha = 0.45
+        ctx.strokeStyle = dotColor
         ctx.stroke()
-        ctx.globalAlpha = 1
       }
     }
-  }, [items, layout, selection, commits, laneColW, totalRows])
+  }, [items, layout, selection, commits, laneColW, totalRows, laneColors, segByRow, labelsByOid])
 
   const wipCount = (status?.files.length ?? 0) > 0
   const stagedCount = status?.files.filter(isStaged).length ?? 0
@@ -278,7 +352,7 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
             const c = commits.find((x) => x.oid === oid)
             openRebaseDialog({
               base: oid,
-              baseShort: oid.slice(0, 7),
+              baseShort: oid.slice(0, 8),
               baseSubject: c?.subject ?? ''
             })
           }
@@ -432,19 +506,20 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
                 </div>
               ) : commit ? (
                 <>
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <span className="truncate text-zinc-200" title={commit.subject}>
-                      {commit.subject || '(no message)'}
-                    </span>
+                  <div className="flex min-w-0 flex-1 items-center gap-1.5">
                     {labels.map((l) => (
                       <span
                         key={l.text}
-                        className="shrink-0 rounded px-1 py-px text-[10px] font-medium"
+                        className="max-w-[220px] shrink-0 truncate rounded px-1 py-px text-[10px] font-medium"
                         style={{ backgroundColor: `${l.color}22`, color: l.color }}
+                        title={l.text}
                       >
                         {l.text}
                       </span>
                     ))}
+                    <span className="min-w-0 truncate text-zinc-200" title={commit.subject}>
+                      {commit.subject || '(no message)'}
+                    </span>
                   </div>
                   <span
                     className="ml-3 hidden shrink-0 truncate text-zinc-500 md:inline"
@@ -456,7 +531,11 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
                     className="ml-3 shrink-0 text-right tabular-nums text-zinc-600"
                     style={{ width: dateCol.value }}
                   >
-                    {relativeTime(commit.committerTime)}
+                    {commitTimeLabel(commit.committerTime, {
+                      today: t('time.today'),
+                      yesterday: t('time.yesterday'),
+                      dayBefore: t('time.dayBefore')
+                    })}
                   </span>
                   <span
                     className="ml-3 shrink-0 font-mono text-zinc-500"

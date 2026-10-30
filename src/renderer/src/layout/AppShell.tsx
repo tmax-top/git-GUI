@@ -122,7 +122,7 @@ export function AppShell(): React.JSX.Element {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
+    <div className="flex h-screen flex-col overflow-hidden bg-zinc-950 text-zinc-100">
       <Toolbar />
       <RepoTabs />
       <OpBanner />

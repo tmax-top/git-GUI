@@ -45,10 +45,14 @@ function Row(props: {
   active?: boolean
   badge?: string
   badgeColor?: string
+  /** Upstream divergence — rendered as ↑unpushed / ↓unpulled chips. */
+  sync?: { ahead?: number; behind?: number; gone?: boolean }
   onClick?: () => void
   onContextMenu?: (e: React.MouseEvent) => void
   title?: string
 }): React.JSX.Element {
+  const sync = props.sync
+  const hasSync = Boolean(sync && (sync.ahead || sync.behind || sync.gone))
   return (
     <button
       className={`flex w-full items-center gap-1.5 px-3 py-1 text-left text-xs hover:bg-zinc-800/70 ${
@@ -60,6 +64,31 @@ function Row(props: {
     >
       {props.active && <span className="text-emerald-500">●</span>}
       <span className="min-w-0 flex-1 truncate">{props.label}</span>
+      {hasSync && sync && (
+        <span className="flex shrink-0 items-center gap-1 font-mono text-[10px]">
+          {sync.gone ? (
+            <span
+              className="rounded bg-rose-500/15 px-1 text-rose-400"
+              title={t('left.upstreamGone')}
+            >
+              ⚠
+            </span>
+          ) : (
+            <>
+              {sync.ahead ? (
+                <span className="text-amber-400" title={tf('left.aheadTip', { n: sync.ahead })}>
+                  ↑{sync.ahead}
+                </span>
+              ) : null}
+              {sync.behind ? (
+                <span className="text-sky-400" title={tf('left.behindTip', { n: sync.behind })}>
+                  ↓{sync.behind}
+                </span>
+              ) : null}
+            </>
+          )}
+        </span>
+      )}
       {props.badge && (
         <span
           className="shrink-0 rounded px-1 text-[10px]"
@@ -86,7 +115,8 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
   const stashDrop = useApp((s) => s.stashDrop)
   const setConfirm = useApp((s) => s.setConfirm)
   const setPrompt = useApp((s) => s.setPrompt)
-  const prs = useApp((s) => s.prs)
+  // Sidebar always lists open PRs — deliberately not the PR panel's filtered list.
+  const prs = useApp((s) => s.sidebarPrs)
   const activeRepoRef = useApp((s) => s.activeRepoRef)
   const prPanelOpen = useApp((s) => s.prPanelOpen)
   const togglePrPanel = useApp((s) => s.togglePrPanel)
@@ -350,6 +380,7 @@ export function LeftPanel(props: { width: number }): React.JSX.Element {
             active={refs?.current === b.name}
             badge={refs?.current === b.name ? t('left.current') : undefined}
             badgeColor="#15803d"
+            sync={{ ahead: b.ahead, behind: b.behind, gone: b.gone }}
             onClick={() => doCheckout(b.name)}
             onContextMenu={(e) => onBranchContextMenu(e, b.name)}
           />

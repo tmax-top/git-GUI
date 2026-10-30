@@ -16,6 +16,7 @@ export const DiffPanel = memo(function DiffPanel(): React.JSX.Element {
   const selection = useApp((s) => s.selection)
   const diffFiles = useApp((s) => s.diffFiles)
   const diffLoading = useApp((s) => s.diffLoading)
+  const commitDiffFile = useApp((s) => s.commitDiffFile)
   const commits = useApp((s) => s.commits)
   const stageHunk = useApp((s) => s.stageHunk)
   const conflict = useApp((s) => s.conflict)
@@ -24,7 +25,9 @@ export const DiffPanel = memo(function DiffPanel(): React.JSX.Element {
 
   if (selection.kind === 'commit') {
     const commit = currentCommit(commits, selection.oid)
-    const images = diffFiles.filter(isImageFile)
+    // One file at a time: the changed-file list lives in the right panel.
+    const activePath = commitDiffFile ?? diffFiles[0]?.path
+    const activeFile = diffFiles.find((f) => f.path === activePath)
     return (
       <div className="flex h-full min-h-0 flex-col">
         <div className="shrink-0 border-b border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs">
@@ -34,10 +37,16 @@ export const DiffPanel = memo(function DiffPanel(): React.JSX.Element {
           </span>
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
-          <DiffView files={diffFiles} loading={diffLoading} />
-          {images.map((f, i) => (
-            <ImageView key={i} repoPath={repoPath} path={f.path} source="commit" oid={selection.oid} />
-          ))}
+          {activeFile && isImageFile(activeFile) ? (
+            <ImageView
+              repoPath={repoPath}
+              path={activeFile.path}
+              source="commit"
+              oid={selection.oid}
+            />
+          ) : (
+            <DiffView files={activeFile ? [activeFile] : []} loading={diffLoading} />
+          )}
         </div>
       </div>
     )

@@ -1,25 +1,86 @@
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Modal, btnGhost, btnPrimary } from '../components/Modal'
-import { t } from '../i18n'
+import { t, tf } from '../i18n'
 import { useApp } from '../store'
 
 export function CreatePrDialog(): React.JSX.Element {
   const close = useApp((s) => s.closeCreatePr)
   const refs = useApp((s) => s.refs)
+  const repoPath = useApp((s) => s.repoPath)
   const defaultBranch = useApp((s) => s.settings.defaultBranch) || 'main'
   const createPr = useApp((s) => s.createPr)
+  const refreshStatus = useApp((s) => s.refreshStatus)
 
   const currentBranch = refs?.current ?? ''
-  const localBranches = (refs?.branches ?? []).filter((b) => !b.isRemote).map((b) => b.name)
 
-  const [sourceBranch, setSourceBranch] = useState(currentBranch || (localBranches[0] ?? ''))
+  // A PR can only target branches that exist on the remote, so offer
+  // refs/remotes/* (deduped across remotes) rather than local branches.
+  const remoteBranches = useMemo(() => {
+    const names = new Set<string>()
+    for (const b of refs?.branches ?? []) {
+      if (!b.isRemote) continue
+      const slash = b.name.indexOf('/')
+      if (slash < 0) continue
+      names.add(b.name.slice(slash + 1))
+    }
+    return [...names].sort((a, b) => a.localeCompare(b))
+  }, [refs])
+
+  /** short name → remote-tracking ref, e.g. "main" → "origin/main". */
+  const refByShortName = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const b of refs?.branches ?? []) {
+      if (!b.isRemote) continue
+      const slash = b.name.indexOf('/')
+      if (slash < 0) continue
+      const short = b.name.slice(slash + 1)
+      if (!map.has(short)) map.set(short, b.name)
+    }
+    return map
+  }, [refs])
+
+  // Default head = the branch you're on (that's what you usually want to PR),
+  // default base = the repo's default branch when it exists on the remote.
+  const [sourceBranch, setSourceBranch] = useState(currentBranch || (remoteBranches[0] ?? ''))
   const [targetBranch, setTargetBranch] = useState(
-    localBranches.includes(defaultBranch) ? defaultBranch : localBranches[0] ?? 'main'
+    remoteBranches.includes(defaultBranch)
+      ? defaultBranch
+      : remoteBranches.includes('main')
+        ? 'main'
+        : (remoteBranches[0] ?? defaultBranch)
   )
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [draft, setDraft] = useState(false)
+  const [autoDesc, setAutoDesc] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [genNote, setGenNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  /** Fill the description with every commit in base..head, oldest first. */
+  const generateDescription = useCallback(
+    async (base: string, head: string): Promise<void> => {
+      const from = refByShortName.get(base.trim()) ?? base.trim()
+      const to = refByShortName.get(head.trim()) ?? head.trim()
+      if (!repoPath || !from || !to || from === to) return
+      setGenerating(true)
+      try {
+        const commits = await window.api.gitCommitRange({ repoPath, base: from, head: to })
+        if (commits.length === 0) {
+          setDescription('')
+          setGenNote(t('pr.autoDescEmpty'))
+        } else {
+          setDescription(commits.map((c) => `- ${c.shortOid} ${c.subject}`).join('\n'))
+          setGenNote('')
+        }
+      } catch (e) {
+        setGenNote(e instanceof Error ? e.message : String(e))
+      } finally {
+        setGenerating(false)
+      }
+    },
+    [repoPath, refByShortName]
+  )
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
@@ -60,29 +121,68 @@ export function CreatePrDialog(): React.JSX.Element {
   return (
     <Modal title={t('pr.createTitle')} onClose={close} footer={footer}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 text-xs">
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1 text-zinc-400">
-            <span>{t('pr.sourceBranch')}</span>
-            <input
-              className={inputClass}
-              value={sourceBranch}
-              onChange={(e) => setSourceBranch(e.target.value)}
-              placeholder="feature-branch"
-              required
-              data-testid="create-pr-source"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-zinc-400">
-            <span>{t('pr.targetBranch')}</span>
-            <input
-              className={inputClass}
-              value={targetBranch}
-              onChange={(e) => setTargetBranch(e.target.value)}
-              placeholder="main"
-              required
-              data-testid="create-pr-target"
-            />
-          </label>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between text-[11px] text-zinc-500">
+            <span>{tf('pr.remoteBranchCount', { n: remoteBranches.length })}</span>
+            <button
+              type="button"
+              className="text-sky-400 hover:underline"
+              onClick={() => void refreshStatus()}
+            >
+              {t('pr.refreshBranches')}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-zinc-400">
+              <span>{t('pr.sourceBranch')}</span>
+              <select
+                className={inputClass}
+                value={sourceBranch}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setSourceBranch(v)
+                  if (autoDesc) void generateDescription(targetBranch, v)
+                }}
+                title={t('pr.branchFromRemote')}
+                required
+                data-testid="create-pr-source"
+              >
+                {sourceBranch && !remoteBranches.includes(sourceBranch) && (
+                  <option value={sourceBranch}>{sourceBranch}</option>
+                )}
+                {remoteBranches.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-zinc-400">
+              <span>{t('pr.targetBranch')}</span>
+              <select
+                className={inputClass}
+                value={targetBranch}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setTargetBranch(v)
+                  if (autoDesc) void generateDescription(v, sourceBranch)
+                }}
+                title={t('pr.branchFromRemote')}
+                required
+                data-testid="create-pr-target"
+              >
+                {targetBranch && !remoteBranches.includes(targetBranch) && (
+                  <option value={targetBranch}>{targetBranch}</option>
+                )}
+                {remoteBranches.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
 
         <label className="flex flex-col gap-1 text-zinc-400">
@@ -98,8 +198,38 @@ export function CreatePrDialog(): React.JSX.Element {
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-zinc-400">
-          <span>{t('pr.prDesc')}</span>
+        <div className="flex flex-col gap-1 text-zinc-400">
+          <div className="flex items-center justify-between gap-2">
+            <span>{t('pr.prDesc')}</span>
+            <span className="flex items-center gap-2 text-[11px]">
+              <label className="flex cursor-pointer items-center gap-1 text-zinc-400">
+                <input
+                  type="checkbox"
+                  className="rounded border-zinc-700 bg-zinc-950 text-sky-500"
+                  checked={autoDesc}
+                  disabled={!repoPath}
+                  onChange={(e) => {
+                    const on = e.target.checked
+                    setAutoDesc(on)
+                    if (on) void generateDescription(targetBranch, sourceBranch)
+                    else setGenNote('')
+                  }}
+                  data-testid="create-pr-auto-desc"
+                />
+                <span>{t('pr.autoDesc')}</span>
+              </label>
+              {autoDesc && (
+                <button
+                  type="button"
+                  className="text-sky-400 hover:underline disabled:opacity-50"
+                  disabled={generating}
+                  onClick={() => void generateDescription(targetBranch, sourceBranch)}
+                >
+                  {generating ? t('common.loading') : t('pr.regenerate')}
+                </button>
+              )}
+            </span>
+          </div>
           <textarea
             className={`${inputClass} min-h-24 resize-y`}
             value={description}
@@ -107,7 +237,12 @@ export function CreatePrDialog(): React.JSX.Element {
             placeholder={t('pr.commentPlaceholder')}
             data-testid="create-pr-desc"
           />
-        </label>
+          {autoDesc && (
+            <span className="text-[10px] text-zinc-500">
+              {genNote || tf('pr.autoDescHint', { base: targetBranch, head: sourceBranch })}
+            </span>
+          )}
+        </div>
 
         <label className="flex items-center gap-2 text-zinc-300">
           <input

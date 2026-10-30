@@ -4,6 +4,7 @@ import type {
   AppInfoDto,
   AppSettingsDto,
   BlobDto,
+  CommitDto,
   ConflictsDto,
   ConflictFileDto,
   GitStatusDto,
@@ -66,6 +67,7 @@ export interface GitGuiApi {
 
   gitStatus(repoPath: string): Promise<GitStatusDto>
   gitGraph(args: { repoPath: string; limit: number; skip: number }): Promise<GraphPageDto>
+  gitCommitRange(args: { repoPath: string; base: string; head: string }): Promise<CommitDto[]>
   gitRefs(repoPath: string): Promise<RefsDto>
   gitCheckout(args: { repoPath: string; target: string }): Promise<void>
   gitStage(args: { repoPath: string; paths: string[] }): Promise<void>
@@ -293,6 +295,7 @@ const api: GitGuiApi = {
 
   gitStatus: (repoPath) => ipcRenderer.invoke(IPC.gitStatus, { repoPath }),
   gitGraph: (args) => ipcRenderer.invoke(IPC.gitGraph, args),
+  gitCommitRange: (args) => ipcRenderer.invoke(IPC.gitCommitRange, args),
   gitRefs: (repoPath) => ipcRenderer.invoke(IPC.gitRefs, { repoPath }),
   gitCheckout: (args) => ipcRenderer.invoke(IPC.gitCheckout, args),
   gitStage: (args) => ipcRenderer.invoke(IPC.gitStage, args),

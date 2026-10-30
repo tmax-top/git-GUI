@@ -8,6 +8,9 @@ function isRelevantGitFile(rest: string): boolean {
   if (rest === 'HEAD' || rest === 'index' || rest === 'MERGE_HEAD' || rest === 'ORIG_HEAD') return true
   if (rest === 'packed-refs') return true
   if (rest.startsWith('refs/')) return true
+  // Linked worktrees live under .git/worktrees/<name>; a checkout or commit
+  // made from another worktree must refresh the branch list too.
+  if (rest.startsWith('worktrees/')) return true
   if (rest.startsWith('rebase-merge/') || rest.startsWith('rebase-apply/')) return true
   return false
 }

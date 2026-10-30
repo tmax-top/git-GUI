@@ -25,7 +25,10 @@ export interface RevListOptions {
 
 export async function revList(repoPath: string, opts: RevListOptions = {}): Promise<GraphCommit[]> {
   const args = ['rev-list', '--topo-order', '--parents']
-  if (opts.all !== false) args.push('--all')
+  if (opts.all !== false) {
+    // Keep agent-tooling snapshot refs out of the graph (see log.ts).
+    args.push('--exclude=refs/agents/*', '--all')
+  }
   if (opts.limit != null) args.push('-n', String(opts.limit))
   if (opts.skip != null) args.push(`--skip=${opts.skip}`)
   const { stdout } = await execGitOrThrow({ cwd: repoPath, args, signal: opts.signal })

@@ -263,8 +263,8 @@ describe('rebaseRange', () => {
     const range = await rebaseRange(d, base)
     expect(range.map((c) => c.subject)).toEqual(['first subject', 'second subject'])
     expect(range.map((c) => c.oid)).toEqual([c1, c2])
-    expect(range[0].shortOid).toBe(c1.slice(0, 7))
-    expect(range.every((c) => c.shortOid.length === 7)).toBe(true)
+    expect(range[0].shortOid).toBe(c1.slice(0, 8))
+    expect(range.every((c) => c.shortOid.length === 8)).toBe(true)
   })
 
   it('returns an empty range when base is HEAD, and replays after rebase', async () => {

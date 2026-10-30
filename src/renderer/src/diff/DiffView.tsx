@@ -289,12 +289,6 @@ export function DiffView(props: {
         >
           {t('diff.word')}
         </button>
-        <span className="flex-1" />
-        {props.files.map((f, i) => (
-          <span key={i} className="truncate text-zinc-600" title={f.path}>
-            {f.path}
-          </span>
-        ))}
       </div>
 
       {props.files.map((file, fileIdx) => {

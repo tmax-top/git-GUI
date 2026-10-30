@@ -97,6 +97,8 @@ interface AppState {
   selection: Selection
   diff: string
   diffFiles: DiffFile[]
+  /** File whose diff is shown for the selected commit (null = first file). */
+  commitDiffFile: string | null
   diffLoading: boolean
   /** Conflicted file staged content for the three-way editor (null when none). */
   conflict: ConflictFileDto | null
@@ -134,6 +136,8 @@ interface AppState {
   activePrDetail: PullRequestDetailDto | null
   activePrLoading: boolean
   prFilter: PrState | 'all'
+  /** Open PRs for the left sidebar — always state=open, ignores `prFilter`. */
+  sidebarPrs: PullRequestDto[]
   /** Workspaces manager modal visibility. */
   workspaceModalOpen: boolean
   /** Command palette modal visibility. */
@@ -152,6 +156,8 @@ interface AppState {
   /** Close a tab by path (defaults to the active repo); activates another tab if the active one closes. */
   closeRepo(path?: string): Promise<void>
   refreshAll(): Promise<void>
+  /** Refresh locally, then fetch in the background so remote branches catch up. */
+  refreshWithRemote(): Promise<void>
   refreshStatus(): Promise<void>
   refreshOpState(): Promise<void>
   loadGraph(reset: boolean): Promise<void>
@@ -159,6 +165,8 @@ interface AppState {
 
   selectWip(): void
   selectCommit(oid: string): void
+  /** Pick which file of the selected commit is rendered in the diff pane. */
+  selectCommitDiffFile(path: string | null): void
   selectFile(path: string, cached: boolean, untracked: boolean): void
   /** Write the edited resolution over the conflicted worktree file + stage it. */
   resolveConflict(content: string): Promise<void>
@@ -195,6 +203,8 @@ interface AppState {
   closeCreatePr(): void
   setPrFilter(filter: PrState | 'all'): void
   loadPrs(): Promise<void>
+  /** Refresh the sidebar's open-PR list (never filtered by the PR panel). */
+  loadSidebarPrs(): Promise<void>
   selectPr(id: string | number | null): Promise<void>
   createPr(input: CreatePrInputDto): Promise<void>
   commentPr(body: string): Promise<void>
@@ -431,6 +441,7 @@ export const useApp = create<AppState>((set, get) => {
     selection: { kind: 'wip' },
     diff: '',
     diffFiles: [],
+    commitDiffFile: null,
     diffLoading: false,
     conflict: null,
     conflictLoading: false,
@@ -455,6 +466,7 @@ export const useApp = create<AppState>((set, get) => {
     activePrDetail: null,
     activePrLoading: false,
     prFilter: 'open',
+    sidebarPrs: [],
     workspaceModalOpen: false,
     paletteOpen: false,
     shortcutsOpen: false,
@@ -585,8 +597,11 @@ export const useApp = create<AppState>((set, get) => {
         const recents = [path, ...get().settings.recent.filter((p) => p !== path)].slice(0, 20)
         void get().updateSettings({ recent: recents })
         const ref = await window.api.providerDetectRepoRef({ repoPath: path }).catch(() => null)
-        set({ activeRepoRef: ref, prs: [], activePrId: null, activePrDetail: null })
-        if (ref) void get().loadPrs()
+        set({ activeRepoRef: ref, prs: [], sidebarPrs: [], activePrId: null, activePrDetail: null })
+        if (ref) {
+          void get().loadPrs()
+          void get().loadSidebarPrs()
+        }
         await get().refreshAll()
         await get().refreshUndo()
         return true
@@ -640,6 +655,7 @@ export const useApp = create<AppState>((set, get) => {
           prPanelOpen: false,
           createPrOpen: false,
           prs: [],
+          sidebarPrs: [],
           activePrId: null,
           activePrDetail: null,
           undoInfo: { canUndo: false, canRedo: false }
@@ -665,6 +681,24 @@ export const useApp = create<AppState>((set, get) => {
         get().loadGraph(true),
         get().refreshOpState()
       ])
+    },
+
+    /**
+     * Toolbar refresh: re-read the repo immediately (cheap, offline), then
+     * fetch in the background so branches created or moved on the remote also
+     * show up. Fetch failures are ignored — being offline is not an error here.
+     */
+    async refreshWithRemote(): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      await get().refreshAll()
+      if (get().sync) return
+      try {
+        await window.api.gitFetch({ repoPath, opId: opId() })
+        await get().refreshAll()
+      } catch {
+        // No remote, offline, or auth failure: the local refresh already ran.
+      }
     },
 
     async refreshOpState(): Promise<void> {
@@ -716,14 +750,18 @@ export const useApp = create<AppState>((set, get) => {
 
     selectWip(): void {
       const repoPath = get().repoPath
-      set({ selection: { kind: 'wip' }, diff: '', diffFiles: [], conflict: null, conflictLoading: false })
+      set({ selection: { kind: 'wip' }, diff: '', diffFiles: [], commitDiffFile: null, conflict: null, conflictLoading: false })
       if (repoPath) void get().refreshStatus()
     },
 
     selectCommit(oid: string): void {
-      set({ selection: { kind: 'commit', oid } })
+      set({ selection: { kind: 'commit', oid }, commitDiffFile: null })
       const repoPath = get().repoPath
       if (repoPath) void loadDiffFor({ kind: 'commit', oid }, repoPath)
+    },
+
+    selectCommitDiffFile(path: string | null): void {
+      set({ commitDiffFile: path })
     },
 
     selectFile(path, cached, untracked): void {
@@ -1041,6 +1079,22 @@ export const useApp = create<AppState>((set, get) => {
       }
     },
 
+    /**
+     * Sidebar list: open PRs only. Kept separate from `prs` so switching the
+     * PR panel's state filter never changes what the sidebar shows.
+     */
+    async loadSidebarPrs(): Promise<void> {
+      const repoPath = get().repoPath
+      if (!repoPath) return
+      try {
+        const sidebarPrs = await window.api.prList({ repoPath, state: 'open' })
+        set({ sidebarPrs })
+      } catch {
+        // Sidebar is passive: swallow provider/auth errors, the PR panel
+        // surfaces them when the user opens it.
+      }
+    },
+
     async selectPr(id: string | number | null): Promise<void> {
       set({ activePrId: id, activePrDetail: null })
       const repoPath = get().repoPath
@@ -1061,6 +1115,7 @@ export const useApp = create<AppState>((set, get) => {
         const created = await window.api.prCreate({ repoPath, ...input })
         set({ createPrOpen: false })
         await get().loadPrs()
+        void get().loadSidebarPrs()
         await get().selectPr(created.id)
       } catch (e) {
         set({ error: errText(e) })
@@ -1086,6 +1141,7 @@ export const useApp = create<AppState>((set, get) => {
       try {
         await window.api.prMerge({ repoPath, id: prId, method })
         await get().loadPrs()
+        void get().loadSidebarPrs()
         await get().selectPr(prId)
         await get().refreshAll()
       } catch (e) {
@@ -1114,6 +1170,7 @@ export const useApp = create<AppState>((set, get) => {
       set({ settings })
       if (get().activeRepoRef?.provider === provider) {
         void get().loadPrs()
+        void get().loadSidebarPrs()
       }
       return account
     },

@@ -252,7 +252,7 @@ export async function rebaseRange(repoPath: string, base: string): Promise<Rebas
       const nul = line.indexOf('\x00')
       const oid = line.slice(0, nul)
       const subject = line.slice(nul + 1)
-      return { oid, shortOid: oid.slice(0, 7), subject }
+      return { oid, shortOid: oid.slice(0, 8), subject }
     })
 }
 

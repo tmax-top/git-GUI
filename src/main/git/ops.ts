@@ -9,11 +9,31 @@ export interface RefInfo {
   upstream?: string
   isRemote: boolean
   subject?: string
+  /** Commits ahead of the upstream (unpushed). */
+  ahead?: number
+  /** Commits behind the upstream (unpulled). */
+  behind?: number
+  /** Upstream branch was deleted on the remote. */
+  gone?: boolean
 }
 
 // Tab-separated fields. Refnames cannot contain tabs/control chars, so
 // newline-delimited records are safe (for-each-ref has no -z on all versions).
-const REF_FORMAT = '%(refname:short)\t%(refname)\t%(objectname)\t%(upstream:short)\t%(subject)'
+// `upstream:track` must stay before the subject, which may itself contain tabs.
+const REF_FORMAT =
+  '%(refname:short)\t%(refname)\t%(objectname)\t%(upstream:short)\t%(upstream:track)\t%(subject)'
+
+/** Parse `%(upstream:track)`, e.g. `[ahead 2, behind 1]` / `[gone]`. */
+function parseTrack(track: string): Pick<RefInfo, 'ahead' | 'behind' | 'gone'> {
+  if (!track) return {}
+  if (track.includes('gone')) return { gone: true }
+  const ahead = /ahead (\d+)/.exec(track)
+  const behind = /behind (\d+)/.exec(track)
+  return {
+    ahead: ahead ? Number(ahead[1]) : undefined,
+    behind: behind ? Number(behind[1]) : undefined
+  }
+}
 
 function parseRefs(stdout: string, isRemote: boolean): RefInfo[] {
   const refs: RefInfo[] = []
@@ -26,9 +46,10 @@ function parseRefs(stdout: string, isRemote: boolean): RefInfo[] {
       fullName: f[1],
       oid: f[2],
       upstream: f[3] || undefined,
+      ...parseTrack(f[4] ?? ''),
       isRemote,
       // subject may itself contain tabs — keep the remainder intact
-      subject: f.length > 4 ? f.slice(4).join('\t') || undefined : undefined
+      subject: f.length > 5 ? f.slice(5).join('\t') || undefined : undefined
     })
   }
   return refs

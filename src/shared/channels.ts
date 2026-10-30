@@ -11,6 +11,7 @@ export const IPC = {
   repoValidate: 'repo:validate',
   gitStatus: 'git:status',
   gitGraph: 'git:graph',
+  gitCommitRange: 'git:commitRange',
   gitRefs: 'git:refs',
   gitCheckout: 'git:checkout',
   gitStage: 'git:stage',

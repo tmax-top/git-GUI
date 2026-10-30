@@ -514,7 +514,7 @@ function SubmoduleSection(): React.JSX.Element {
                       ? t('submodule.statusConflict')
                       : t('submodule.statusOk')}
               </span>
-              <span className="font-mono text-xs text-zinc-600">{s.oid.slice(0, 7)}</span>
+              <span className="font-mono text-xs text-zinc-600">{s.oid.slice(0, 8)}</span>
               <label className="flex items-center gap-1 text-xs text-zinc-400">
                 <span>{t('submodule.policy')}</span>
                 <select

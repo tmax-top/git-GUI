@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getLog } from '@main/git/log'
+import { getCommitsBetween, getLog } from '@main/git/log'
 import { commitFile, git, makeMergeRepo, makeTempRepo } from '../fixtures/repo'
 
 describe('getLog', () => {
@@ -35,6 +35,43 @@ describe('getLog', () => {
       const page2 = await getLog(repo.dir, { limit: 2, skip: 2 })
       expect(page2).toHaveLength(1)
       expect(page2[0].subject).toBe('first')
+    } finally {
+      repo.cleanup()
+    }
+  })
+
+  it('hides agent snapshot refs from --all', async () => {
+    const repo = makeTempRepo()
+    try {
+      commitFile(repo.dir, 'a.txt', '1\n', 'real work')
+
+      // Agent tooling keeps per-turn worktree snapshots under
+      // refs/agents/<session>/checkpoints/... as orphan commits. They are
+      // reachable from --all but must not show up in the commit graph.
+      const tree = git(repo.dir, 'rev-parse', 'HEAD^{tree}').trim()
+      const snapshot = git(repo.dir, 'commit-tree', tree, '-m', 'Agent host session x - turn 1').trim()
+      git(repo.dir, 'update-ref', 'refs/agents/session-1/checkpoints/turn/1', snapshot)
+
+      expect(git(repo.dir, 'log', '--all', '--format=%s')).toContain('Agent host session x - turn 1')
+
+      const log = await getLog(repo.dir)
+      expect(log.map((c) => c.subject)).toEqual(['real work'])
+    } finally {
+      repo.cleanup()
+    }
+  })
+
+  it('getCommitsBetween lists base..head oldest first', async () => {
+    const repo = makeTempRepo()
+    try {
+      const base = commitFile(repo.dir, 'a.txt', '1\n', 'base commit')
+      git(repo.dir, 'checkout', '-b', 'feature')
+      commitFile(repo.dir, 'a.txt', '2\n', 'first feature commit')
+      commitFile(repo.dir, 'a.txt', '3\n', 'second feature commit')
+
+      const commits = await getCommitsBetween(repo.dir, 'main', 'feature')
+      expect(commits.map((c) => c.subject)).toEqual(['first feature commit', 'second feature commit'])
+      expect(commits.map((c) => c.oid)).not.toContain(base)
     } finally {
       repo.cleanup()
     }

@@ -13,7 +13,24 @@ import { useApp, fileGroups, currentCommit, errText } from '../store'
 import { t, tf } from '../i18n'
 import { fullDate, statusLetter } from '../utils/format'
 import { btnPrimary } from '../components/Modal'
+import { Tip } from '../components/Tooltip'
 import type { StatusFileDto } from '@shared/ipc'
+import type { DiffFile } from '@shared/diff'
+
+/** One-letter status shown in the changed-file list of a commit. */
+function diffLetter(f: DiffFile): string {
+  return f.status === 'new' ? 'A' : f.status === 'deleted' ? 'D' : f.status === 'renamed' ? 'R' : 'M'
+}
+
+function diffLetterColor(f: DiffFile): string {
+  return f.status === 'new'
+    ? 'text-emerald-400'
+    : f.status === 'deleted'
+      ? 'text-rose-400'
+      : f.status === 'renamed'
+        ? 'text-amber-400'
+        : 'text-sky-400'
+}
 
 function FileRow(props: {
   file: StatusFileDto
@@ -45,13 +62,12 @@ function FileRow(props: {
   const open = (): void =>
     selectFile(file.path, variant === 'staged', variant === 'untracked')
 
-  const iconBtn =
-    'flex items-center rounded px-2 py-1 leading-none opacity-0 group-hover:opacity-100 hover:bg-zinc-700'
+  const iconBtn = 'flex items-center rounded p-1 leading-none hover:bg-zinc-700'
   const icon = 'h-3.5 w-3.5'
 
   return (
     <div
-      className={`group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-xs hover:bg-zinc-800/70 ${
+      className={`group relative flex cursor-pointer items-center gap-1.5 px-2 py-1 text-xs hover:bg-zinc-800/70 ${
         selected ? 'bg-zinc-800' : ''
       }`}
       onClick={open}
@@ -66,69 +82,79 @@ function FileRow(props: {
         {file.path}
         {file.origPath && <span className="text-zinc-600"> ← {file.origPath}</span>}
       </span>
-      <span className="flex shrink-0 gap-1">
+      {/* Actions float over the row instead of reserving width, so long paths
+          can use the whole panel and still truncate at the real edge. */}
+      <span className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5 rounded border border-zinc-800/60 bg-zinc-950 px-1 opacity-0 shadow-sm transition group-focus-within:opacity-100 group-hover:opacity-100">
         {variant !== 'staged' && (
-          <button
-            className={`${iconBtn} text-emerald-400 hover:bg-emerald-900/60`}
-            title={t('panel.stageTip')}
-            onClick={(e) => {
-              e.stopPropagation()
-              void stage([file.path])
-            }}
-          >
-            <FontAwesomeIcon icon={faPlus} className={icon} />
-          </button>
+          <Tip label={t('panel.stageTip')}>
+            <button
+              className={`${iconBtn} text-emerald-400 hover:bg-emerald-900/60`}
+              aria-label={t('panel.stageTip')}
+              onClick={(e) => {
+                e.stopPropagation()
+                void stage([file.path])
+              }}
+            >
+              <FontAwesomeIcon icon={faPlus} className={icon} />
+            </button>
+          </Tip>
         )}
         {variant === 'staged' && (
-          <button
-            className={`${iconBtn} text-amber-400 hover:bg-amber-900/60`}
-            title={t('panel.unstageTip')}
-            onClick={(e) => {
-              e.stopPropagation()
-              void unstage([file.path])
-            }}
-          >
-            <FontAwesomeIcon icon={faMinus} className={icon} />
-          </button>
+          <Tip label={t('panel.unstageTip')}>
+            <button
+              className={`${iconBtn} text-amber-400 hover:bg-amber-900/60`}
+              aria-label={t('panel.unstageTip')}
+              onClick={(e) => {
+                e.stopPropagation()
+                void unstage([file.path])
+              }}
+            >
+              <FontAwesomeIcon icon={faMinus} className={icon} />
+            </button>
+          </Tip>
         )}
         {variant !== 'staged' && (
-          <button
-            className={`${iconBtn} text-rose-400 hover:bg-rose-900/60`}
-            title={variant === 'untracked' ? t('panel.cleanTip') : t('panel.discardTip')}
-            onClick={(e) => {
-              e.stopPropagation()
-              setConfirm({
-                title: variant === 'untracked' ? t('panel.clean') : t('panel.discard'),
-                body:
-                  variant === 'untracked'
-                    ? tf('panel.cleanConfirm', { path: file.path })
-                    : tf('panel.discardConfirm', { path: file.path }),
-                confirmLabel: t('common.confirm'),
-                danger: true,
-                onConfirm: async () => {
-                  if (variant === 'untracked') await clean([file.path])
-                  else await discard([file.path])
-                }
-              })
-            }}
-          >
-            <FontAwesomeIcon
-              icon={variant === 'untracked' ? faXmark : faRotateLeft}
-              className={icon}
-            />
-          </button>
+          <Tip label={variant === 'untracked' ? t('panel.cleanTip') : t('panel.discardTip')}>
+            <button
+              className={`${iconBtn} text-rose-400 hover:bg-rose-900/60`}
+              aria-label={variant === 'untracked' ? t('panel.cleanTip') : t('panel.discardTip')}
+              onClick={(e) => {
+                e.stopPropagation()
+                setConfirm({
+                  title: variant === 'untracked' ? t('panel.clean') : t('panel.discard'),
+                  body:
+                    variant === 'untracked'
+                      ? tf('panel.cleanConfirm', { path: file.path })
+                      : tf('panel.discardConfirm', { path: file.path }),
+                  confirmLabel: t('common.confirm'),
+                  danger: true,
+                  onConfirm: async () => {
+                    if (variant === 'untracked') await clean([file.path])
+                    else await discard([file.path])
+                  }
+                })
+              }}
+            >
+              <FontAwesomeIcon
+                icon={variant === 'untracked' ? faXmark : faRotateLeft}
+                className={icon}
+              />
+            </button>
+          </Tip>
         )}
         {variant === 'untracked' && (
-          <button
-            className={`${iconBtn} text-zinc-400 hover:bg-zinc-700`}
-            title={t('panel.ignoreTip')}
-            onClick={(e) => {
-              e.stopPropagation()
-              void ignore(file.path)
-            }}
-          >
-            <FontAwesomeIcon icon={faArrowRight} className={icon} />
-          </button>
+          <Tip label={t('panel.ignoreTip')}>
+            <button
+              className={`${iconBtn} text-zinc-400 hover:bg-zinc-700`}
+              aria-label={t('panel.ignoreTip')}
+              onClick={(e) => {
+                e.stopPropagation()
+                void ignore(file.path)
+              }}
+            >
+              <FontAwesomeIcon icon={faArrowRight} className={icon} />
+            </button>
+          </Tip>
         )}
       </span>
     </div>
@@ -145,14 +171,15 @@ function BulkBtn(props: {
   onClick: () => void
 }): React.JSX.Element {
   return (
-    <button
-      className={`rounded p-1 leading-none opacity-50 transition hover:bg-zinc-700 group-hover:opacity-100 ${props.tone}`}
-      title={props.label}
-      aria-label={props.label}
-      onClick={props.onClick}
-    >
-      <FontAwesomeIcon icon={props.icon} className="h-3 w-3" />
-    </button>
+    <Tip label={props.label}>
+      <button
+        className={`rounded p-1 leading-none opacity-50 transition hover:bg-zinc-700 group-hover:opacity-100 ${props.tone}`}
+        aria-label={props.label}
+        onClick={props.onClick}
+      >
+        <FontAwesomeIcon icon={props.icon} className="h-3 w-3" />
+      </button>
+    </Tip>
   )
 }
 
@@ -204,6 +231,9 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
   const discard = useApp((s) => s.discard)
   const clean = useApp((s) => s.clean)
   const setConfirm = useApp((s) => s.setConfirm)
+  const diffFiles = useApp((s) => s.diffFiles)
+  const commitDiffFile = useApp((s) => s.commitDiffFile)
+  const selectCommitDiffFile = useApp((s) => s.selectCommitDiffFile)
 
   const [message, setMessage] = useState('')
   const [amend, setAmend] = useState(false)
@@ -273,12 +303,13 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
 
   if (selection.kind === 'commit') {
     const commit = currentCommit(commits, selection.oid)
+    const activePath = commitDiffFile ?? diffFiles[0]?.path
     return (
       <aside
-        className="flex shrink-0 flex-col overflow-auto border-l border-zinc-800 bg-zinc-950 text-sm"
+        className="flex shrink-0 flex-col border-l border-zinc-800 bg-zinc-950 text-sm"
         style={{ width: props.width }}
       >
-        <div className="border-b border-zinc-800 px-3 py-2">
+        <div className="max-h-[45%] shrink-0 overflow-auto border-b border-zinc-800 px-3 py-2">
           <button className="mb-2 text-xs text-zinc-400 hover:text-emerald-400" onClick={selectWip}>
             {t('commit.backToWip')}
           </button>
@@ -306,7 +337,7 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
                         className="rounded bg-zinc-800 px-1 font-mono text-sky-400 hover:bg-zinc-700"
                         onClick={() => selectCommit(p)}
                       >
-                        {p.slice(0, 7)}
+                        {p.slice(0, 8)}
                       </button>
                     ))}
                   </div>
@@ -316,17 +347,59 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
                 <pre className="mt-2 whitespace-pre-wrap text-xs text-zinc-500">{commit.body}</pre>
               )}
               <div className="mt-3 border-t border-zinc-800/80 pt-2">
-                <button
-                  className="rounded bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-700 font-medium"
-                  onClick={() => void exportPatch(commit.oid)}
-                  title={t('patch.exportCommit')}
-                  data-testid="commit-export-patch-btn"
-                >
-                  📥 {t('patch.export')}
-                </button>
+                <Tip label={t('patch.exportCommit')}>
+                  <button
+                    className="rounded bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-700 font-medium"
+                    onClick={() => void exportPatch(commit.oid)}
+                    data-testid="commit-export-patch-btn"
+                  >
+                    📥 {t('patch.export')}
+                  </button>
+                </Tip>
               </div>
             </>
           )}
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex shrink-0 items-center border-b border-zinc-800 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+            {tf('commit.files', { n: diffFiles.length })}
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto">
+            {diffFiles.map((f) => {
+              const active = f.path === activePath
+              const added = f.hunks.reduce(
+                (n, h) => n + h.lines.filter((l) => l.type === '+').length,
+                0
+              )
+              const removed = f.hunks.reduce(
+                (n, h) => n + h.lines.filter((l) => l.type === '-').length,
+                0
+              )
+              return (
+                <button
+                  key={f.path}
+                  className={`flex w-full items-center gap-1.5 px-3 py-1 text-left text-xs ${
+                    active ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800/60'
+                  }`}
+                  title={f.path}
+                  onClick={() => selectCommitDiffFile(f.path)}
+                  data-testid={`commit-file-${f.path}`}
+                >
+                  <span className={`w-3 shrink-0 font-mono font-bold ${diffLetterColor(f)}`}>
+                    {diffLetter(f)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{f.path}</span>
+                  {added > 0 && (
+                    <span className="shrink-0 font-mono text-[10px] text-emerald-500">+{added}</span>
+                  )}
+                  {removed > 0 && (
+                    <span className="shrink-0 font-mono text-[10px] text-rose-500">-{removed}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </aside>
     )
@@ -356,22 +429,24 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
       style={{ width: props.width }}
     >
       <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-1.5 text-xs bg-zinc-900/40">
-        <button
-          className="text-xs text-sky-400 hover:underline"
-          onClick={() => void exportPatch()}
-          title={t('panel.exportWipTip')}
-          data-testid="wip-export-patch-btn"
-        >
-          {t('patch.exportWip')}
-        </button>
-        <button
-          className="text-xs text-sky-400 hover:underline"
-          onClick={openPatchModal}
-          title={t('panel.applyPatchTip')}
-          data-testid="wip-apply-patch-btn"
-        >
-          {t('patch.apply')}
-        </button>
+        <Tip label={t('panel.exportWipTip')}>
+          <button
+            className="text-xs text-sky-400 hover:underline"
+            onClick={() => void exportPatch()}
+            data-testid="wip-export-patch-btn"
+          >
+            {t('patch.exportWip')}
+          </button>
+        </Tip>
+        <Tip label={t('panel.applyPatchTip')}>
+          <button
+            className="text-xs text-sky-400 hover:underline"
+            onClick={openPatchModal}
+            data-testid="wip-apply-patch-btn"
+          >
+            {t('patch.apply')}
+          </button>
+        </Tip>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         <Section
@@ -449,20 +524,21 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
       <div className="border-t border-zinc-800 p-2">
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-[11px] font-medium text-zinc-400">{t('panel.message')}</span>
-          <button
-            type="button"
-            className="flex items-center gap-1 rounded bg-gradient-to-r from-emerald-600/20 to-sky-600/20 border border-emerald-500/30 px-2 py-0.5 text-[11px] text-emerald-300 transition hover:from-emerald-600/30 hover:to-sky-600/30 hover:border-emerald-400 hover:text-emerald-200 disabled:opacity-50 cursor-pointer"
-            disabled={aiLoading || !repoPath}
-            onClick={() => void handleAiGenerate()}
-            title={t('panel.aiHint')}
-            data-testid="ai-generate-commit-btn"
-          >
-            <FontAwesomeIcon
-              icon={aiLoading ? faSpinner : faWandMagicSparkles}
-              className={`h-3 w-3 ${aiLoading ? 'animate-spin text-emerald-400' : 'text-emerald-400'}`}
-            />
-            <span>{aiLoading ? t('panel.aiGenerating') : t('panel.aiGenerate')}</span>
-          </button>
+          <Tip label={t('panel.aiHint')}>
+            <button
+              type="button"
+              className="flex items-center gap-1 rounded bg-gradient-to-r from-emerald-600/20 to-sky-600/20 border border-emerald-500/30 px-2 py-0.5 text-[11px] text-emerald-300 transition hover:from-emerald-600/30 hover:to-sky-600/30 hover:border-emerald-400 hover:text-emerald-200 disabled:opacity-50 cursor-pointer"
+              disabled={aiLoading || !repoPath}
+              onClick={() => void handleAiGenerate()}
+              data-testid="ai-generate-commit-btn"
+            >
+              <FontAwesomeIcon
+                icon={aiLoading ? faSpinner : faWandMagicSparkles}
+                className={`h-3 w-3 ${aiLoading ? 'animate-spin text-emerald-400' : 'text-emerald-400'}`}
+              />
+              <span>{aiLoading ? t('panel.aiGenerating') : t('panel.aiGenerate')}</span>
+            </button>
+          </Tip>
         </div>
         <textarea
           className="h-20 w-full resize-none rounded border border-zinc-800 bg-zinc-900 p-2 text-xs text-zinc-100 outline-none focus:border-emerald-600"
@@ -507,18 +583,22 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
           </div>
         </details>
 
-        <button
-          className={`${btnPrimary()} mt-2 w-full`}
-          disabled={(!message.trim() && !amend) || committing || (stagedCount === 0 && !amend)}
-          onClick={() => void submit()}
-          title={
+        <Tip
+          className="mt-2 block w-full"
+          label={
             stagedCount === 0 && !amend
               ? t('panel.nothingStaged')
               : tf('panel.commitTip', { n: stagedCount })
           }
         >
-          {committing ? t('panel.committing') : t('panel.commit')}
-        </button>
+          <button
+            className={`${btnPrimary()} w-full`}
+            disabled={(!message.trim() && !amend) || committing || (stagedCount === 0 && !amend)}
+            onClick={() => void submit()}
+          >
+            {committing ? t('panel.committing') : t('panel.commit')}
+          </button>
+        </Tip>
         {stagedCount === 0 && !amend && (
           <div className="mt-1 text-center text-[10px] text-zinc-600">{t('panel.nothingStaged')}</div>
         )}
