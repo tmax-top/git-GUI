@@ -12,6 +12,13 @@ const ROW_H = 28
 const LANE_W = 16
 const PAD_X = 8
 const RADIUS = 4.5
+/**
+ * How many rows the lane-column width is derived from, measured from the first
+ * row at the current scroll offset. Deliberately a constant: see the comment on
+ * `visibleMaxLane` — a viewport-dependent count makes the column width and the
+ * horizontal scrollbar feed each other.
+ */
+const LANE_SCAN_ROWS = 48
 const LANE_COLORS = [
   '#15803d',
   '#0369a1',
@@ -157,32 +164,44 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
     }
   }, [lastIndex, totalRows, hasMore, graphLoading, loadMore])
 
-  // Lane column width follows the lanes actually used by VISIBLE rows, not the
-  // all-time peak (`layout.laneCount`). A deep history with one wide merge would
-  // otherwise pin the graph column open and leave a huge gap before Subject.
+  // Lane column width follows the lanes used around the current scroll offset,
+  // not the all-time peak (`layout.laneCount`): a deep history with one wide
+  // merge would otherwise pin the graph column open and leave a huge gap before
+  // Subject.
+  //
+  // IMPORTANT — the scan window is anchored on `items[0].index` (a function of
+  // scrollTop only) and spans a CONSTANT number of rows. It must never depend on
+  // how many rows currently fit, because that count is derived from the viewport
+  // height, and the height changes when a horizontal scrollbar appears. That
+  // closes a feedback loop:
+  //   laneColW ↓ → contentW ↓ → hscrollbar disappears → viewport taller →
+  //   more rows scanned → wider merge row seen → laneColW ↑ → contentW ↑ →
+  //   hscrollbar appears → viewport shorter → laneColW ↓ → …
+  // Once contentW straddles clientWidth the loop never converges and the
+  // renderer hangs (dragging a panel divider triggers exactly that).
   const visibleMaxLane = useMemo(() => {
+    if (items.length === 0) return 0
     let max = 0
     const touch = (lane: number): void => {
       if (lane > max) max = lane
     }
-    for (const v of items) {
-      if (v.index === 0) continue // WIP row draws on lane 0
-      const row = layout.rows[v.index - 1]
+    // Start one row early so curves entering the viewport are not clipped.
+    const from = Math.max(0, items[0].index - 1)
+    const to = Math.min(totalRows - 1, from + LANE_SCAN_ROWS)
+    for (let i = from; i <= to; i++) {
+      if (i === 0) continue // WIP row draws on lane 0
+      const row = layout.rows[i - 1]
       if (!row) continue
       touch(row.lane)
       for (const lane of row.activeBelow) touch(lane)
-    }
-    // Segment endpoints on visible rows (curves must not be clipped).
-    const visibleRows = new Set<number>()
-    for (const v of items) if (v.index > 0) visibleRows.add(v.index - 1)
-    for (const seg of layout.segments) {
-      if (visibleRows.has(seg.row)) {
+      // Segment endpoints on scanned rows (curves must not be clipped).
+      for (const seg of segByRow.get(i - 1) ?? []) {
         touch(seg.fromLane)
         touch(seg.toLane)
       }
     }
     return max
-  }, [items, layout])
+  }, [items, layout, totalRows, segByRow])
 
   const laneColW = Math.max(visibleMaxLane + 1, 1) * LANE_W + PAD_X * 2
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -442,6 +461,10 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
         </div>
       </div>
 
+      {/* No `scrollbar-gutter: stable` here on purpose: the app styles scrollbars
+          via ::-webkit-scrollbar, and reserving the gutter with a custom
+          scrollbar makes clientWidth flip between two values, which drives the
+          ResizeObserver below into an endless re-render loop at startup. */}
       <div ref={parentRef} className="relative flex-1 overflow-auto overscroll-contain">
       <div className="relative" style={{ height: virtualizer.getTotalSize(), width: contentW, minWidth: '100%' }}>
         {items.length > 0 && (
@@ -470,7 +493,6 @@ export const CommitGraph = memo(function CommitGraph(): React.JSX.Element {
             <div
               key={v.key}
               data-index={i}
-              ref={virtualizer.measureElement}
               className={`absolute left-0 flex w-full cursor-pointer items-center border-b border-black/5 pr-3 text-xs hover:bg-zinc-800/50 ${
                 selected ? 'bg-sky-500/10' : ''
               }`}

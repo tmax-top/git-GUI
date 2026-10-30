@@ -75,22 +75,42 @@ export function Resizer(props: ResizerProps): React.JSX.Element {
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
     e.preventDefault()
+    const el = e.currentTarget
+    const pointerId = e.pointerId
     last.current = props.orientation === 'vertical' ? e.clientX : e.clientY
 
+    // Capture the pointer: without it a release outside the window never
+    // reaches us, so `pointerup` never fires and the move listener stays
+    // attached — the divider then keeps tracking the cursor forever.
+    try {
+      el.setPointerCapture(pointerId)
+    } catch {
+      /* capture unsupported — the window listeners still work */
+    }
+
     const move = (ev: PointerEvent): void => {
+      if (ev.pointerId !== pointerId) return
       const cur = props.orientation === 'vertical' ? ev.clientX : ev.clientY
       const delta = cur - last.current
       if (delta === 0) return
       last.current = cur
       props.onDelta(delta)
     }
-    const up = (): void => {
+    const up = (ev: PointerEvent): void => {
+      if (ev.pointerId !== pointerId) return
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+      try {
+        el.releasePointerCapture(pointerId)
+      } catch {
+        /* already released */
+      }
       props.onCommit()
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
   }
 
   const orientationCls =
