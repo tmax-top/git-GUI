@@ -60,6 +60,7 @@ export type NumberSettingKey =
   | 'graphDateWidth'
   | 'graphOidWidth'
   | 'terminalHeight'
+  | 'commitBoxHeight'
 
 interface ResizerProps {
   /** vertical = drag left/right (col-resize); horizontal = drag up/down (row-resize). */

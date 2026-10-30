@@ -128,6 +128,8 @@ export interface AppSettingsDto {
   terminalFontSize: number
   /** Terminal panel height in px, 120–600. */
   terminalHeight: number
+  /** Commit box (message + options + submit) height in px, 140–560. */
+  commitBoxHeight: number
   /** Connected GitProvider accounts. */
   providerAccounts: import('./providers').ProviderAccountDto[]
   /** Workspaces grouping multiple repositories. */
@@ -785,6 +787,7 @@ export const settingsPatchSchema = z.object({
   terminalFontFamily: z.string().max(255).optional(),
   terminalFontSize: z.number().int().min(8).max(32).optional(),
   terminalHeight: z.number().int().min(120).max(600).optional(),
+  commitBoxHeight: z.number().int().min(140).max(560).optional(),
   providerAccounts: z
     .array(
       z.object({

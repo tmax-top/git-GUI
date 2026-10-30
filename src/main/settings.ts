@@ -40,6 +40,7 @@ export interface AppSettings {
   terminalFontSize: number
   /** Terminal panel height in px, 120–600. */
   terminalHeight: number
+  commitBoxHeight: number
   /** Connected GitProvider accounts (GitHub, Azure DevOps); tokens stored in secrets. */
   providerAccounts: import('../shared/providers').ProviderAccountDto[]
   /** Workspaces grouping multiple repositories. */
@@ -73,8 +74,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   rightPanelWidth: 320,
   graphSplitPct: 55,
   graphAuthorWidth: 112,
-  graphDateWidth: 48,
-  graphOidWidth: 40,
+  graphDateWidth: 96,
+  graphOidWidth: 64,
   autoFetchInterval: 0,
   autoPrune: true,
   notifications: true,
@@ -82,6 +83,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   terminalFontFamily: '',
   terminalFontSize: 13,
   terminalHeight: 240,
+  commitBoxHeight: 208,
   providerAccounts: [],
   workspaces: [],
   activeWorkspaceId: null,

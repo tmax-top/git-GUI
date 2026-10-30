@@ -3,6 +3,12 @@ import { loadSettings } from './settings'
 import type { AiGenerateCommitMsgInputDto, AiTestConnectionInputDto } from '../shared/ipc'
 
 /**
+ * Providers that rejected `thinking: {type: "disabled"}` (400/422). Cached per
+ * endpoint+model so we only pay for the probe once per session.
+ */
+const thinklessUnsupported = new Set<string>()
+
+/**
  * Normalize a user-entered OpenAI-compatible base URL:
  * strip an HTTP method prefix (e.g. "POST https://…"), surrounding whitespace,
  * a trailing slash, and a pasted `/chat/completions` path.
@@ -88,10 +94,18 @@ Follow the Conventional Commits specification:
     headers['Authorization'] = `Bearer ${apiKey}`
   }
 
+  // Reasoning models spend most of the wall clock on hidden thinking: on
+  // SenseNova a one-line commit message burned 585 of 599 completion tokens
+  // (~16s) versus 15 tokens (~2s) with thinking off. Ask for it off and fall
+  // back silently when the provider does not know the field.
+  const modelKey = `${endpoint}|${model}`
+  const wantThinkless = !thinklessUnsupported.has(modelKey)
+
   /** One chat-completions round-trip; owns its own timeout. */
   const requestOnce = async (
-    maxTokens: number
-  ): Promise<{ text: string; finishReason?: string; apiError?: string }> => {
+    maxTokens: number,
+    thinkless: boolean
+  ): Promise<{ text: string; finishReason?: string; apiError?: string } | null> => {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 45000)
     try {
@@ -106,12 +120,19 @@ Follow the Conventional Commits specification:
             { role: 'user', content: userContent }
           ],
           temperature: 0.3,
-          max_tokens: maxTokens
+          max_tokens: maxTokens,
+          ...(thinkless ? { thinking: { type: 'disabled' } } : {})
         })
       })
 
       if (!res.ok) {
         const errBody = await res.text().catch(() => '')
+        // Unknown body fields come back as 400/422 — remember it and retry
+        // without the flag instead of failing the whole request.
+        if (thinkless && (res.status === 400 || res.status === 422)) {
+          thinklessUnsupported.add(modelKey)
+          return null
+        }
         throw new Error(`AI 服务请求失败 (${res.status}): ${errBody || res.statusText}`)
       }
 
@@ -144,12 +165,13 @@ Follow the Conventional Commits specification:
     // tight cap can be exhausted before any content is emitted — the provider
     // then answers with an empty message and finish_reason=length. Start with
     // headroom and retry once with a larger budget when that happens.
-    let result = await requestOnce(2000)
-    if (!result.text && result.finishReason === 'length') {
-      result = await requestOnce(4000)
+    let result = await requestOnce(2000, wantThinkless)
+    if (!result) result = await requestOnce(2000, false)
+    if (result && !result.text && result.finishReason === 'length') {
+      result = await requestOnce(4000, false)
     }
-    if (!result.text) {
-      const reason = result.finishReason ?? result.apiError ?? 'empty response'
+    if (!result?.text) {
+      const reason = result?.finishReason ?? result?.apiError ?? 'empty response'
       throw new Error(`AI 服务未返回有效的 commit 消息内容（finish_reason: ${reason}）`)
     }
 

@@ -14,6 +14,7 @@ import { t, tf } from '../i18n'
 import { fullDate, statusLetter } from '../utils/format'
 import { btnPrimary } from '../components/Modal'
 import { Tip } from '../components/Tooltip'
+import { Resizer, useResizableSetting } from '../components/Resizer'
 import type { StatusFileDto } from '@shared/ipc'
 import type { DiffFile } from '@shared/diff'
 
@@ -241,6 +242,8 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
   const [coEmail, setCoEmail] = useState('')
   const [committing, setCommitting] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
+  // Height of the message/commit box — drag the divider above it to resize.
+  const commitBox = useResizableSetting('commitBoxHeight', 208, 140, 560)
 
   const handleAiGenerate = async (): Promise<void> => {
     if (!repoPath || aiLoading) return
@@ -521,8 +524,18 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
         </Section>
       </div>
 
-      <div className="border-t border-zinc-800 p-2">
-        <div className="mb-1.5 flex items-center justify-between">
+      <Resizer
+        orientation="horizontal"
+        onDelta={(d) => commitBox.onDelta(-d)}
+        onCommit={commitBox.onCommit}
+      />
+
+      <div
+        className="flex shrink-0 flex-col p-2"
+        style={{ height: commitBox.value }}
+        data-testid="commit-box"
+      >
+        <div className="mb-1.5 flex shrink-0 items-center justify-between">
           <span className="text-[11px] font-medium text-zinc-400">{t('panel.message')}</span>
           <Tip label={t('panel.aiHint')}>
             <button
@@ -541,7 +554,7 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
           </Tip>
         </div>
         <textarea
-          className="h-20 w-full resize-none rounded border border-zinc-800 bg-zinc-900 p-2 text-xs text-zinc-100 outline-none focus:border-emerald-600"
+          className="h-20 w-full min-h-0 flex-1 resize-none rounded border border-zinc-800 bg-zinc-900 p-2 text-xs text-zinc-100 outline-none focus:border-emerald-600"
           placeholder={t('panel.message')}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -551,7 +564,7 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
             }
           }}
         />
-        <div className="mt-1 flex items-center gap-2 text-[11px] text-zinc-400">
+        <div className="mt-1 flex shrink-0 items-center gap-2 text-[11px] text-zinc-400">
           <label className="flex cursor-pointer items-center gap-1" title={t('panel.amendTip')}>
             <input
               type="checkbox"
@@ -565,7 +578,7 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
           <span>{tf('status.staged', { n: stagedCount })}</span>
         </div>
 
-        <details className="mt-1 text-[11px] text-zinc-500">
+        <details className="mt-1 shrink-0 text-[11px] text-zinc-500">
           <summary className="cursor-pointer">{t('panel.coauthor')}</summary>
           <div className="mt-1 flex gap-1">
             <input
@@ -584,7 +597,7 @@ export function CommitPanel(props: { width: number }): React.JSX.Element {
         </details>
 
         <Tip
-          className="mt-2 block w-full"
+          className="mt-2 block w-full shrink-0"
           label={
             stagedCount === 0 && !amend
               ? t('panel.nothingStaged')
